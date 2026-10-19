@@ -28,6 +28,7 @@ def main():
            "--add-data", os.path.join(HERE, "templates.json") + os.pathsep + ".",
            "--add-data", os.path.join(HERE, "icon.png") + os.pathsep + ".",            # 창·화면 아이콘
            "--hidden-import", "PIL.Image",                                              # 사진 줄이기(gen.process_photo 가 함수 안에서 불러온다)
+           "--hidden-import", "qr",                                                     # 폰에서 쓰기 QR(app.py 가 함수 안에서 불러온다)
            "--add-data", os.path.join(HERE, "prompts") + os.pathsep + "prompts",
            "--distpath", os.path.join(HERE, "dist"), "--workpath", WORK, "--specpath", WORK,
            os.path.join(HERE, "app.py")]

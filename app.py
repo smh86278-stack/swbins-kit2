@@ -4,6 +4,7 @@
     python app.py      (exe 는 build.py)
 
 - 화면은 127.0.0.1 에만 연다. 상태를 바꾸는 POST 는 띄울 때마다 새로 만드는 토큰(X-Token)이 있어야 한다.
+  「폰에서 쓰기」를 켰을 때만 집 네트워크 주소에 따로 연다(PIN → 세션 쿠키, PC 를 건드리는 길은 막음 — PhoneHandler).
 - 창은 Edge --app(따로 둔 프로필). 창이 닫혀 신호(/api/ping)가 끊기면 서버도 스스로 끝난다.
 - 데이터는 %APPDATA%\\PostKit (config.json · voice\\*.txt · posts\\<글>\\).
 - 올리기는 사람이 한다 — 여기선 복사와 글쓰기 창 열기까지만.
@@ -314,18 +315,28 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
 
-    def send(self, code, body, ctype="application/json; charset=utf-8"):
+    phone = False                  # 폰 서버(PhoneHandler)면 참
+
+    def send(self, code, body, ctype="application/json; charset=utf-8", headers=()):
         if not isinstance(body, bytes):
             body = json.dumps(body, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        for k, v in headers:
+            self.send_header(k, v)
         self.end_headers()
         self.wfile.write(body)
 
     def host_ok(self):
         return self.headers.get("Host", "") in ("127.0.0.1:%d" % self.server.server_port, "localhost:%d" % self.server.server_port)
+
+    def page_token(self):
+        return TOKEN
+
+    def post_ok(self):
+        return self.host_ok() and self.headers.get("X-Token") == TOKEN
 
     def body_bytes(self, limit=30 * 1024 * 1024):
         n = int(self.headers.get("Content-Length") or 0)
@@ -344,8 +355,16 @@ class Handler(http.server.BaseHTTPRequestHandler):
         q = dict(urllib.parse.parse_qsl(u.query))
         try:
             if u.path == "/":
-                html = read_text(os.path.join(gen.RES, "ui.html")).replace("__TOKEN__", TOKEN)
+                html = read_text(os.path.join(gen.RES, "ui.html")).replace("__TOKEN__", self.page_token()) \
+                    .replace("__PHONE__", "true" if self.phone else "false")
                 return self.send(200, html.encode("utf-8"), "text/html; charset=utf-8")
+            if u.path == "/api/phone":
+                return self.send(200, phone_status())
+            if u.path == "/api/phone/qr.svg":
+                if not PHONE["srv"]:
+                    return self.send(404, {"error": "폰에서 쓰기가 꺼져 있어요."})
+                import qr
+                return self.send(200, qr.svg(phone_url()).encode("utf-8"), "image/svg+xml")
             if u.path == "/icon.png":
                 with open(os.path.join(gen.RES, "icon.png"), "rb") as f:
                     return self.send(200, f.read(), "image/png")
@@ -389,7 +408,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return self.send(400, {"error": str(e)})
 
     def do_POST(self):
-        if not self.host_ok() or self.headers.get("X-Token") != TOKEN:
+        if not self.post_ok():
             return self.send(403, {"error": "토큰이 맞지 않습니다 — 창을 새로 고침하세요."})
         u = urllib.parse.urlparse(self.path)
         q = dict(urllib.parse.parse_qsl(u.query))
@@ -481,6 +500,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 os.makedirs(DATA, exist_ok=True)
                 write_text(CFG, json.dumps(cfg, ensure_ascii=False, indent=2))
                 return self.send(200, cfg)
+            if u.path == "/api/phone":
+                if b.get("on"):
+                    phone_start()
+                else:
+                    phone_stop()
+                return self.send(200, phone_status())
             if u.path == "/api/shortcuts":
                 if not FROZEN:
                     raise ValueError("바로가기는 PostKit.exe 로 실행했을 때만 만들 수 있어요.")
@@ -489,6 +514,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     raise ValueError("바로가기를 만들지 못했어요 — app.log 를 보세요.")
                 return self.send(200, {"made": made})
             if u.path == "/api/open":
+                if self.phone:                          # 폰에선 PC 를 건드리지 않는다 — 글쓰기 주소만 돌려줘 폰에서 연다
+                    plat = platform(b.get("platform", ""))
+                    url = (plat or {}).get("write_url", "")
+                    if b.get("what") != "write" or not url.startswith("https://"):
+                        raise ValueError("폰에서는 쓸 수 없는 기능이에요." if b.get("what") != "write" else "글쓰기 주소가 없어요.")
+                    return self.send(200, {"url": url})
                 if b.get("what") == "folder":
                     d = post_path(b.get("name", ""))
                     open_folder(os.path.join(d, "photos"))
@@ -505,6 +536,136 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return self.send(404, {"error": "없는 길입니다."})
         except ValueError as e:
             return self.send(400, {"error": str(e)})
+
+
+# ---------- 폰에서 쓰기 ----------
+# 켤 때만 이 PC 의 집 네트워크 주소(예: 192.168.0.5:8653)에 따로 연다. 켤 때마다 새 PIN, 5번 틀리면 5분 잠금.
+# 폰은 PIN 으로 받은 세션(쿠키)으로만 들어오고, PC 를 건드리는 길(폴더 열기·바로가기·폰 설정)은 막는다.
+
+PHONE = {"srv": None, "ip": "", "port": 8653, "pin": "", "sessions": set(), "fails": 0, "lock_until": 0.0}
+PHONE_ONLY_PC = {"/api/phone", "/api/phone/qr.svg", "/api/shortcuts"}
+LOGIN_HTML = """<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>글 도우미</title><link rel="icon" href="/icon.png"><link rel="apple-touch-icon" href="/icon.png"><style>
+body{margin:0;min-height:100vh;display:grid;place-items:center;font:16px/1.5 -apple-system,"Apple SD Gothic Neo",sans-serif;color:#2f2b45;
+background:radial-gradient(600px 400px at 0 0,#fde9f3,transparent 60%),radial-gradient(600px 400px at 100% 100%,#e6f1ff,transparent 60%),#f7f4fc}
+.b{background:#fff;border-radius:20px;padding:28px 24px;width:min(320px,88vw);text-align:center;box-shadow:0 8px 22px rgba(110,90,170,.16)}
+img{width:56px;height:56px;border-radius:16px}h1{font-size:19px;margin:10px 0 4px}p{color:#8781a0;font-size:13px;margin:0 0 16px}
+input{width:100%;box-sizing:border-box;font-size:28px;letter-spacing:10px;text-align:center;padding:10px;border:2px solid #ebe4f6;border-radius:14px;outline:none}
+input:focus{border-color:#8a72ee}button{margin-top:14px;width:100%;padding:12px;border:0;border-radius:999px;font-size:16px;font-weight:bold;color:#fff;
+background:linear-gradient(135deg,#8a72ee,#ef8fbf)}#e{color:#e05a76;font-size:13px;min-height:20px;margin-top:10px}</style></head><body>
+<form class="b" id="f"><img src="/icon.png" alt=""><h1>글 도우미</h1><p>PC 화면에 보이는 6자리 PIN 을 넣으세요</p>
+<input id="p" inputmode="numeric" autocomplete="one-time-code" maxlength="6" autofocus><button>들어가기</button><div id="e"></div></form>
+<script>document.getElementById("f").onsubmit=async e=>{e.preventDefault();
+const r=await fetch("/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:document.getElementById("p").value})});
+if(r.ok)return location.reload();const d=await r.json().catch(()=>({}));document.getElementById("e").textContent=d.error||"PIN 이 맞지 않아요."};</script></body></html>"""
+
+
+def lan_ip():
+    """이 PC 의 네트워크 주소(밖으로 나가는 길의 주소 — 실제로 보내지는 않는다)."""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("10.255.255.255", 1))
+        return s.getsockname()[0]
+    except OSError:
+        return ""
+    finally:
+        s.close()
+
+
+def phone_url():
+    return "http://%s:%d/" % (PHONE["ip"], PHONE["port"])
+
+
+def phone_status():
+    on = bool(PHONE["srv"])
+    return {"on": on, "url": phone_url() if on else "", "pin": PHONE["pin"] if on else ""}
+
+
+def phone_start():
+    if PHONE["srv"]:
+        return
+    ip = lan_ip()
+    if not ip or ip.startswith("127."):
+        raise ValueError("네트워크에 연결돼 있지 않아요 — 와이파이·랜선을 확인하세요.")
+    try:
+        srv = Server((ip, 8653), PhoneHandler)
+    except OSError:
+        srv = Server((ip, 0), PhoneHandler)          # 8653 을 다른 프로그램이 쓰면 빈 포트로
+    PHONE.update(srv=srv, ip=ip, port=srv.server_port, pin="%06d" % secrets.randbelow(10 ** 6), sessions=set(), fails=0, lock_until=0.0)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    log("폰에서 쓰기 켬", phone_url())
+
+
+def phone_stop():
+    srv = PHONE["srv"]
+    PHONE.update(srv=None, pin="", sessions=set())
+    if srv:
+        srv.shutdown()
+        srv.server_close()
+        log("폰에서 쓰기 끔")
+
+
+class PhoneHandler(Handler):
+    phone = True
+
+    def host_ok(self):
+        return self.headers.get("Host", "") == "%s:%d" % (PHONE["ip"], PHONE["port"])
+
+    def session(self):
+        for part in (self.headers.get("Cookie") or "").split(";"):
+            k, _, v = part.strip().partition("=")
+            if k == "pk" and v in PHONE["sessions"]:
+                return v
+        return ""
+
+    def page_token(self):
+        return self.session()
+
+    def post_ok(self):
+        s = self.session()
+        return self.host_ok() and bool(s) and self.headers.get("X-Token") == s
+
+    def do_GET(self):
+        if not self.host_ok():
+            return self.send(403, {"error": "host"})
+        path = urllib.parse.urlparse(self.path).path
+        if path in PHONE_ONLY_PC:
+            return self.send(403, {"error": "PC 에서만 쓸 수 있어요."})
+        if not self.session() and path != "/icon.png":
+            if path == "/":
+                return self.send(200, LOGIN_HTML.encode("utf-8"), "text/html; charset=utf-8")
+            return self.send(401, {"error": "PIN 으로 다시 들어와 주세요."})
+        return super().do_GET()
+
+    def do_POST(self):
+        path = urllib.parse.urlparse(self.path).path
+        if path == "/login":
+            return self.login()
+        if path in PHONE_ONLY_PC:
+            return self.send(403, {"error": "PC 에서만 쓸 수 있어요."})
+        return super().do_POST()
+
+    def login(self):
+        if not self.host_ok():
+            return self.send(403, {"error": "host"})
+        now = time.time()
+        if now < PHONE["lock_until"]:
+            return self.send(429, {"error": "여러 번 틀려서 잠겼어요. %d분 뒤에 다시 해 보세요." % (int(PHONE["lock_until"] - now) // 60 + 1)})
+        try:
+            pin = str(self.body_json().get("pin", "")).strip()
+        except ValueError:
+            pin = ""
+        if PHONE["pin"] and secrets.compare_digest(pin, PHONE["pin"]):
+            tok = secrets.token_urlsafe(24)
+            PHONE["sessions"].add(tok)
+            PHONE["fails"] = 0
+            log("폰 들어옴", self.client_address[0])
+            return self.send(200, {"ok": True}, headers=[("Set-Cookie", "pk=%s; Path=/; HttpOnly; SameSite=Strict; Max-Age=43200" % tok)])
+        PHONE["fails"] += 1
+        if PHONE["fails"] >= 5:
+            PHONE.update(fails=0, lock_until=now + 300)
+            log("폰 PIN 5번 틀림 — 5분 잠금", self.client_address[0])
+        return self.send(403, {"error": "PIN 이 맞지 않아요."})
 
 
 class Server(socketserver.ThreadingMixIn, http.server.HTTPServer):

@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>글 도우미</title>
 <link rel="icon" href="/icon.png">
+<link rel="apple-touch-icon" href="/icon.png">
+<meta name="apple-mobile-web-app-title" content="글 도우미">
+<meta name="theme-color" content="#f7f4fc">
 <style>
 :root {
   color-scheme: light dark;
@@ -155,6 +158,7 @@ code { background: var(--accentsoft); color: var(--accent); padding: 0 5px; bord
 .list h2 { font-size: 14px; margin: 0 0 6px; }
 
 /* 캠페인 · 장부 */
+nav button { position: relative; }
 nav .badge { margin-left: auto; background: var(--bad); color: #fff; border-radius: 999px; font-size: 11px; padding: 0 7px; line-height: 18px; font-weight: bold; }
 .form .fgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 12px; }
 @media (max-width: 900px) { .form .fgrid { grid-template-columns: 1fr 1fr; } }
@@ -234,6 +238,41 @@ button.danger:hover:not(:disabled) { border-color: var(--bad); color: var(--bad)
 .dots .pi { width: 20px; height: 20px; border-radius: 6px; font-size: 10px; }
 .tag { font-size: 11px; background: var(--soft); border-radius: 10px; padding: 2px 8px; color: var(--muted); flex: none; }
 
+/* 폰에서 쓰기 — PC 설정 칸 */
+.phonebox { display: flex; gap: 18px; align-items: flex-start; margin-top: 12px; flex-wrap: wrap; }
+.phonebox img { width: 180px; height: 180px; border-radius: 12px; border: 1px solid var(--line); background: #fff; }
+.phonebox p { margin: 0 0 4px; font-size: 12.5px; color: var(--muted); }
+.phonebox .purl { font: bold 15px/1.4 Consolas, monospace; color: var(--accent); margin-bottom: 10px; user-select: all; }
+.phonebox .pin { font: bold 30px/1 Consolas, monospace; letter-spacing: 8px; margin-bottom: 8px; }
+.phonebox ul { margin: 4px 0 0; padding-left: 18px; }
+body.phone .pc-only { display: none !important; }
+
+/* 좁은 화면(폰) — 탭은 아래로 */
+@media (max-width: 760px) {
+  body { flex-direction: column; }
+  nav { position: fixed; bottom: 0; left: 0; right: 0; width: auto; flex-direction: row; padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    background: var(--solid); border-top: 1px solid var(--line); z-index: 5; gap: 0; overflow-x: auto; }
+  nav .logo, nav .grow, nav .claude { display: none; }
+  nav button { flex: 1 1 0; flex-direction: column; gap: 1px; font-size: 10px; padding: 6px 0; text-align: center; min-width: 0; white-space: nowrap; justify-content: center; letter-spacing: -.4px; }
+  .campbar { flex-wrap: wrap; }
+  .campbar .hint { flex-basis: 100%; order: 5; }
+  .campbar b, .kind { white-space: nowrap; }
+  nav button.on { box-shadow: none; background: var(--accentsoft); }
+  nav .badge { position: absolute; margin: 0 0 0 22px; }
+  main { padding: 14px 12px 90px; }
+  .head { flex-wrap: wrap; }
+  .head h1 { font-size: 18px; }
+  .grid2, .cards, .helpgrid, .form .fgrid { grid-template-columns: 1fr; }
+  .tiles { grid-template-columns: 1fr 1fr; }
+  .box { padding: 14px; }
+  .card textarea { min-height: 260px; }
+  textarea, input[type=text] { font-size: 16px; }          /* 아이폰이 입력할 때 화면을 확대하지 않게 */
+  .camp { flex-wrap: wrap; }
+  .tbl { font-size: 12px; }
+  .tbl th:nth-child(3), .tbl td:nth-child(3), .tbl th:nth-child(5), .tbl td:nth-child(5) { display: none; }
+  #toast { bottom: 84px; }
+}
+
 #toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(10px); background: var(--text); color: var(--bg);
   padding: 9px 18px; border-radius: 999px; font-size: 13px; opacity: 0; pointer-events: none; transition: .2s; z-index: 9; box-shadow: var(--shadow2); }
 #toast.on { opacity: 1; transform: translateX(-50%); }
@@ -247,6 +286,7 @@ button.danger:hover:not(:disabled) { border-color: var(--bad); color: var(--bad)
   <button data-tab="posts">📂 지난 글</button>
   <button data-tab="camps">🎁 캠페인 <span class="badge" id="dueBadge" hidden></span></button>
   <button data-tab="ledger">📒 장부</button>
+  <button data-tab="settings">⚙️ 설정</button>
   <button data-tab="help">❓ 도움말</button>
   <div class="grow"></div>
   <div class="claude" id="claude">확인 중…</div>
@@ -296,6 +336,29 @@ button.danger:hover:not(:disabled) { border-color: var(--bad); color: var(--bad)
       <div class="row" style="margin-top:10px"><button class="btn main" id="addVoice">넣기</button></div>
     </div>
     <div class="box list" id="voiceList"></div>
+  </section>
+
+  <section id="settings">
+    <div class="head"><div><h1>설정</h1><p>한 번 적어 두면 계속 써요.</p></div></div>
+    <div class="box pc-only">
+      <div class="step"><i>📱</i>폰에서 쓰기 <span class="hint">— 아이폰·아이패드로 같은 와이파이에서</span></div>
+      <div class="row"><button class="btn main" id="phoneToggle">켜기</button><span class="hint" id="phoneState">꺼져 있어요. 켜면 이 PC 가 켜져 있는 동안만 열려요.</span></div>
+      <div class="phonebox" id="phoneInfo" hidden>
+        <img id="phoneQr" alt="QR">
+        <div>
+          <p>폰 카메라로 QR 을 찍거나 주소를 입력하세요.</p>
+          <div class="purl" id="phoneUrl"></div>
+          <p>PIN</p>
+          <div class="pin" id="phonePin"></div>
+          <ul class="hint">
+            <li>폰과 PC 가 <b>같은 와이파이</b>여야 해요. 회사·카페 와이파이에선 막혀 있을 수 있어요.</li>
+            <li>처음 켤 때 윈도우가 「네트워크 허용」을 물으면 <b>개인 네트워크</b>만 허용하세요.</li>
+            <li>끄거나 앱을 닫으면 바로 끊기고, 다시 켜면 PIN 이 바뀌어요.</li>
+            <li>사파리에서 「공유 → 홈 화면에 추가」하면 앱처럼 열려요.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
     <div class="box">
       <div class="step"><i>⚙</i>설정</div>
       <label class="small">👶 아기 정보 (육아 글용 — 비워 두면 안 써요)</label>
@@ -306,7 +369,7 @@ button.danger:hover:not(:disabled) { border-color: var(--bad); color: var(--bad)
       <div class="row"><input type="text" id="fixedTags" placeholder="#동네이름 #내닉네임" style="flex:1"><button class="btn" id="saveTags">저장</button></div>
       <label class="small">네이버 카페 글쓰기 주소 (카페마다 달라요 — 카페 글쓰기 화면 주소를 붙여 넣으세요)</label>
       <div class="row"><input type="text" id="cafeUrl" placeholder="https://cafe.naver.com/..." style="flex:1"><button class="btn" id="saveCafe">저장</button></div>
-      <div class="row" style="margin-top:12px"><button class="btn" id="openData">📁 데이터 폴더 열기</button><button class="btn" id="mkLinks">🔗 바탕 화면·시작 메뉴 바로가기 만들기</button>
+      <div class="row" style="margin-top:12px"><button class="btn pc-only" id="openData">📁 데이터 폴더 열기</button><button class="btn pc-only" id="mkLinks">🔗 바탕 화면·시작 메뉴 바로가기 만들기</button>
         <span class="hint">올리기는 직접 해요 — 자동 발행은 계정 정지 위험 때문에 일부러 넣지 않았어요.</span></div>
     </div>
   </section>
@@ -384,7 +447,7 @@ button.danger:hover:not(:disabled) { border-color: var(--bad); color: var(--bad)
           <li><b>Claude Code</b> 를 설치하고, 터미널에서 <code>claude</code> 를 한 번 실행해 로그인해요.</li>
           <li>왼쪽 아래가 <b>● AI 연결됨</b> 이면 준비 끝. 처음 켜면 바탕 화면·시작 메뉴에 <b>글 도우미</b> 바로가기가 생겨요.</li>
           <li><b>🗣️ 내 말투</b>에 예전에 직접 쓴 글을 3~5편 넣어 두면 훨씬 내 글 같아져요.</li>
-          <li>네이버 카페에 올린다면 <b>🗣️ 내 말투 → 설정</b>에 카페 글쓰기 주소를 넣어요.</li>
+          <li>네이버 카페에 올린다면 <b>⚙️ 설정</b>에 카페 글쓰기 주소를 넣어요.</li>
         </ol>
       </div>
       <div class="box">
@@ -409,7 +472,7 @@ button.danger:hover:not(:disabled) { border-color: var(--bad); color: var(--bad)
           <li><b>숫자·시간·작은 디테일</b> — 가격, 기다린 시간, 사장님 한마디, 옆 테이블 같은 것.</li>
           <li><b>아쉬운 점도 하나</b> — 좋은 말만 있으면 광고처럼 보여요.</li>
           <li><b>내 사진</b> — 사진에 보이는 걸 AI 가 글에 녹여요. 남의 사진은 쓰지 마세요.</li>
-          <li><b>👶 육아 글</b> — 🗣️ 내 말투 → 설정에 아기 생일·애칭을 넣으면 「개월 수」가 자동으로 채워지고, 글에는 애칭만 써요. 앱에 넣은 사진은 위치 정보(GPS)를 지워 두니, 올릴 땐 <b>🖼 사진 폴더</b>의 사진을 쓰세요. 아이 얼굴·이름표·집 안 주소가 보이는 사진은 한 번 더 확인하세요.</li>
+          <li><b>👶 육아 글</b> — ⚙️ 설정에 아기 생일·애칭을 넣으면 「개월 수」가 자동으로 채워지고, 글에는 애칭만 써요. 앱에 넣은 사진은 위치 정보(GPS)를 지워 두니, 올릴 땐 <b>🖼 사진 폴더</b>의 사진을 쓰세요. 아이 얼굴·이름표·집 안 주소가 보이는 사진은 한 번 더 확인하세요.</li>
           <li><b>[확인: …]</b> 자리는 AI 가 지어내지 않고 비워 둔 곳이에요. 꼭 직접 채워요.</li>
           <li>나온 글에서 <b>한두 문장은 내 손으로</b> 고쳐 보세요. 그게 제일 확실해요.</li>
           <li>카드 위 <b>⚠️ 노란 상자</b>는 앱이 직접 훑어본 점검이에요 — 뻔한 표현, 같은 끝맺음 반복, 자로 잰 듯한 문단 길이를 짚어 줘요. 고치면 바로 사라져요.</li>
@@ -450,7 +513,7 @@ button.danger:hover:not(:disabled) { border-color: var(--bad); color: var(--bad)
         <details><summary>왜 자동으로 올려 주지 않나요?</summary><p>네이버는 자동 프로그램으로 글을 올리는 걸 약관으로 막고 있어서, 걸리면 저품질 처리나 계정 정지가 될 수 있어요. 그래서 글 만들기까지만 하고 올리기는 직접 해요.</p></details>
         <details><summary>협찬·광고 글은요?</summary><p>메모에 <code>#협찬</code> 이나 <code>#광고</code> 를 넣으면 첫 줄에 표기 문장이 들어가요. 협찬 글에 표기를 빼면 표시광고법 위반이 될 수 있어요.</p></details>
         <details><summary>글이 안 나오고 오류가 떠요.</summary><p>왼쪽 아래가 빨간 점이면 claude 를 못 찾은 거예요. 설치 후 터미널에서 <code>claude</code> 를 실행해 로그인이 되어 있는지 확인하고 앱을 다시 켜 주세요. 사용량 한도에 걸렸을 때도 오류가 나요 — 잠시 뒤 다시 해 보세요.</p></details>
-        <details><summary>만든 글과 사진은 어디에 저장되나요?</summary><p>이 PC 의 <code>%APPDATA%\PostKit</code> 에만 있어요. <b>🗣️ 내 말투 → 📁 데이터 폴더 열기</b>로 볼 수 있어요. 📂 지난 글에서 다시 열어 이어서 다듬을 수 있어요.</p></details>
+        <details><summary>만든 글과 사진은 어디에 저장되나요?</summary><p>이 PC 의 <code>%APPDATA%\PostKit</code> 에만 있어요. <b>⚙️ 설정 → 📁 데이터 폴더 열기</b>로 볼 수 있어요. 📂 지난 글에서 다시 열어 이어서 다듬을 수 있어요.</p></details>
         <details><summary>앱은 어떻게 끄나요?</summary><p>창을 닫으면 1분 안에 저절로 꺼져요. 글을 만드는 중이면 끝난 뒤에 꺼져요.</p></details>
       </div>
     </div>
@@ -459,6 +522,8 @@ button.danger:hover:not(:disabled) { border-color: var(--bad); color: var(--bad)
 <div id="toast"></div>
 <script>
 const TOKEN = "__TOKEN__";
+const PHONE = __PHONE__;          // 폰에서 들어온 화면이면 참
+document.body.classList.toggle("phone", PHONE);
 const QUICK = [["짧게", "지금 길이의 절반 정도로 줄여 줘"], ["길게", "조금 더 자세하게 늘려 줘. 재료에 없는 사실은 넣지 말고"],
                ["캐주얼하게", "더 편하고 친근한 말투로"], ["정중하게", "조금 더 정중한 말투로"],
                ["첫 문장 다시", "첫 문장을 더 눈길 가게 다시 써 줘"], ["해시태그 다시", "본문은 그대로 두고 해시태그만 다시 골라 줘"]];
@@ -698,7 +763,7 @@ function card(p, status, error) {
       <div class="refine"><input type="text" class="ins" placeholder="말로 다듬기 — 예) 가격 얘기를 앞으로, 반말로"><button class="btn rf">다듬기</button></div>
       <div class="actions">${plat(p).title
         ? '<button class="btn ct" title="첫 줄(제목)만 복사 — 제목 칸에 붙여 넣어요">📋 제목</button><button class="btn main cb" title="제목 뺀 본문을 소제목·문단 서식째로 복사">📋 본문 복사(서식)</button>'
-        : '<button class="btn main cp">📋 복사</button>'}<button class="btn wr">✏️ 글쓰기 창 열기</button><button class="btn fd">🖼 사진 폴더</button><button class="btn sv" title="다 고친 이 글을 내 말투 예시로 넣어요 — 쓸수록 내 글에 가까워져요">🗣 내 말투로 저장</button></div>`;
+        : '<button class="btn main cp">📋 복사</button>'}<button class="btn wr">✏️ 글쓰기 창 열기</button><button class="btn fd pc-only">🖼 사진 폴더</button><button class="btn sv" title="다 고친 이 글을 내 말투 예시로 넣어요 — 쓸수록 내 글에 가까워져요">🗣 내 말투로 저장</button></div>`;
     const ta = c.querySelector("textarea");
     ta.oninput = () => { S.texts[p] = ta.value; count(c, ta.value); clearTimeout(ta.h); ta.h = setTimeout(() => {
       showLint(c, ta.value);
@@ -707,10 +772,10 @@ function card(p, status, error) {
     c.querySelector(".rf").onclick = () => refine(p, c.querySelector(".ins").value);
     c.querySelector(".ins").onkeydown = e => { if (e.key === "Enter" && !e.isComposing) refine(p, e.target.value); };
     if (plat(p).title) {
-      c.querySelector(".ct").onclick = () => navigator.clipboard.writeText(splitTitle(ta.value).title).then(() => toast("제목을 복사했어요 — 제목 칸에 붙여 넣으세요."), fail);
+      c.querySelector(".ct").onclick = () => copyText(splitTitle(ta.value).title).then(() => toast("제목을 복사했어요 — 제목 칸에 붙여 넣으세요."), fail);
       c.querySelector(".cb").onclick = () => copyRich(splitTitle(ta.value).body).then(() => toast("본문을 서식째 복사했어요 — 본문에 붙여 넣으세요."), fail);
     } else {
-      c.querySelector(".cp").onclick = () => navigator.clipboard.writeText(ta.value).then(() => toast("복사했어요 — 글쓰기 창에 붙여 넣으세요."), fail);
+      c.querySelector(".cp").onclick = () => copyText(ta.value).then(() => toast("복사했어요 — 글쓰기 창에 붙여 넣으세요."), fail);
     }
     c.querySelector(".sv").onclick = () => {
       const t = voiceSample(ta.value);
@@ -718,7 +783,12 @@ function card(p, status, error) {
       if (/\[확인:/.test(t) && !confirm("[확인: …] 자리가 남아 있어요. 그래도 내 말투 예시로 넣을까요?")) return;
       api("/api/voice", { text: t }).then(() => { toast("내 말투 예시로 넣었어요. 다음 글부터 반영돼요."); loadState(); }).catch(fail);
     };
-    c.querySelector(".wr").onclick =() => api("/api/open", { what: "write", platform: p }).catch(fail);
+    c.querySelector(".wr").onclick = () => {
+      if (!PHONE) return api("/api/open", { what: "write", platform: p }).catch(fail);
+      const u = plat(p).write_url;                      // 폰에선 폰에서 연다(누른 순간 열어야 사파리가 막지 않는다)
+      if (!u) return toast("글쓰기 주소가 없어요 — 카페는 PC 의 설정에서 넣어 주세요.");
+      window.open(u, "_blank");
+    };
     c.querySelector(".fd").onclick = () => api("/api/open", { what: "folder", name: S.name }).catch(fail);
     $("#cards").appendChild(c);
     showBlank();
@@ -811,7 +881,19 @@ function bodyHtml(body) {
   return out.join("");
 }
 function plainBody(body) { return body.replace(/^#{1,3}\s+/gm, ""); }
+// 폰(http 주소)에선 클립보드 API 가 막혀 있어 옛 방식(선택 → 복사)으로
+async function copyText(t) {
+  if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(t);
+  const ta = document.createElement("textarea");
+  ta.value = t; ta.setAttribute("readonly", ""); ta.style.cssText = "position:fixed;top:0;left:0;opacity:0;font-size:16px";
+  document.body.appendChild(ta);
+  ta.focus(); ta.select(); ta.setSelectionRange(0, t.length);
+  const ok = document.execCommand("copy");
+  ta.remove();
+  if (!ok) throw new Error("복사하지 못했어요 — 글을 길게 눌러 직접 복사해 주세요.");
+}
 async function copyRich(body) {
+  if (!window.isSecureContext || !window.ClipboardItem) return copyText(plainBody(body));
   try {
     await navigator.clipboard.write([new ClipboardItem({
       "text/html": new Blob([bodyHtml(body)], { type: "text/html" }),
@@ -846,6 +928,26 @@ $("#saveKids").onclick = () => api("/api/config", { kids: { birthday: $("#kidBir
   .then(d => { S.config = d; toast("저장했어요."); }).catch(fail);
 $("#saveTags").onclick =() => api("/api/config", { fixed_tags: $("#fixedTags").value.trim() }).then(() => toast("저장했어요 — 다음에 만드는 글부터 들어가요.")).catch(fail);
 $("#openData").onclick = () => api("/api/open", { what: "data" }).catch(fail);
+
+// ---------- 폰에서 쓰기(PC 쪽 켜고 끄기) ----------
+function showPhone(st) {
+  $("#phoneToggle").textContent = st.on ? "끄기" : "켜기";
+  $("#phoneToggle").classList.toggle("main", !st.on);
+  $("#phoneState").textContent = st.on ? "켜져 있어요 — 폰에서 아래 주소로 들어오세요." : "꺼져 있어요. 켜면 이 PC 가 켜져 있는 동안만 열려요.";
+  $("#phoneInfo").hidden = !st.on;
+  if (st.on) {
+    $("#phoneQr").src = "/api/phone/qr.svg?t=" + Date.now();
+    $("#phoneUrl").textContent = st.url;
+    $("#phonePin").textContent = st.pin;
+  }
+}
+if (!PHONE) {
+  api("/api/phone").then(showPhone).catch(() => {});
+  $("#phoneToggle").onclick = async () => {
+    const on = $("#phoneToggle").textContent === "켜기";
+    try { showPhone(await api("/api/phone", { on })); if (on) toast("폰에서 쓰기를 켰어요."); } catch (e) { fail(e); }
+  };
+}
 $("#mkLinks").onclick = () => api("/api/shortcuts", {}).then(() => toast("바탕 화면과 시작 메뉴에 「글 도우미」를 만들었어요.")).catch(fail);
 
 // ---------- 지난 글 ----------

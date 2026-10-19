@@ -46,7 +46,7 @@ def draw(n=256):
 def main():
     img = draw(256)
     img.save(os.path.join(HERE, "app.ico"), sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
-    img.resize((64, 64), Image.LANCZOS).save(os.path.join(HERE, "icon.png"))
+    img.resize((180, 180), Image.LANCZOS).save(os.path.join(HERE, "icon.png"))      # 창·화면·아이폰 홈 화면 아이콘
     print("만들었습니다: app.ico · icon.png")
 
 

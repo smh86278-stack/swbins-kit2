@@ -139,12 +139,12 @@ POST 는 전부 토큰(`X-Token` 헤더) 확인, Host 가 127.0.0.1:포트 인�
 
 ## 8. 작업 순서 (Opus)
 
-- [ ] 1. 뼈대: `.gitignore`(dist/ build/ *.spec __pycache__/), `platforms.json`, `prompts\` 5장, `gen.py` 의 `build_prompt`·`parse_result`·`new_post_dir` + `tests\test_gen.py`(프롬프트에 금지 표현 목록·사진 이름·말투 예시가 들어가는지, 경로 안전, json 파싱 3종)
-- [ ] 2. `gen.py run()` — 실제 `claude -p` 호출. 사진 폴더 하나로 네이버 블로그 글이 나오는지 손으로 확인(결과를 README 에 붙이지 말 것 — 개인 정보).
-- [ ] 3. `app.py` + `ui.html` ✍ 탭(재료 → 글 만들기 → 카드 → 다듬기 → 복사/창 열기)
-- [ ] 4. 🗣 내 말투 · 📂 지난 글 탭
-- [ ] 5. `build.py` → `dist\PostKit.exe` 더블클릭 확인
-- [ ] 6. README · 첫 커밋 · `git push origin main`
+- [x] 1. 뼈대: `.gitignore`(dist/ build/ *.spec __pycache__/), `platforms.json`, `prompts\` 5장, `gen.py` 의 `build_prompt`·`parse_result`·`new_post_dir` + `tests\test_gen.py`(프롬프트에 금지 표현 목록·사진 이름·말투 예시가 들어가는지, 경로 안전, json 파싱 3종)
+- [x] 2. `gen.py run()` — 실제 `claude -p` 호출. 사진 폴더 하나로 네이버 블로그 글이 나오는지 손으로 확인(결과를 README 에 붙이지 말 것 — 개인 정보).
+- [x] 3. `app.py` + `ui.html` ✍ 탭(재료 → 글 만들기 → 카드 → 다듬기 → 복사/창 열기)
+- [x] 4. 🗣 내 말투 · 📂 지난 글 탭
+- [x] 5. `build.py` → `dist\PostKit.exe` 더블클릭 확인
+- [x] 6. README · 첫 커밋 · `git push origin main`
 
 각 단계 끝에 `python -m unittest discover tests`. 3단계부터는 전용 창으로 시험한다(사용자 메모장·브라우저 창을 잡지 않는다).
 

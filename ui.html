@@ -4,117 +4,316 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>글 도우미</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%9D%3C/text%3E%3C/svg%3E">
 <style>
 :root {
-  --bg: #faf7f2; --panel: #ffffff; --line: #e8e1d6; --ink: #2f2a25; --sub: #8a8178;
-  --accent: #e08aa0; --accent-ink: #ffffff; --soft: #fbeef1; --ok: #6aa984; --err: #d06464; --chip: #f3efe8;
-}
-@media (prefers-color-scheme: dark) {
-  :root { --bg: #1f1d1b; --panel: #2a2725; --line: #3b3734; --ink: #ece6de; --sub: #a49b91;
-          --accent: #e08aa0; --accent-ink: #1f1d1b; --soft: #3a2d31; --chip: #34302d; }
+  color-scheme: light dark;
+  --bg: light-dark(#f7f4fc, #1a1826); --bg2: light-dark(#fde9f3, #2a1f33); --bg3: light-dark(#e6f1ff, #1c2236);
+  --panel: light-dark(#ffffffe6, #232033e6); --solid: light-dark(#fff, #252236); --soft: light-dark(#f3effb, #2c2840);
+  --text: light-dark(#2f2b45, #ece8fa); --muted: light-dark(#8781a0, #9a94b3); --line: light-dark(#ebe4f6, #363150);
+  --accent: light-dark(#8a72ee, #b0a0ff); --accent2: light-dark(#ef8fbf, #f2a3c8); --accentsoft: light-dark(#eee9ff, #332c52); --onaccent: light-dark(#fff, #1d1830);
+  --ok: light-dark(#2fa57d, #5fd3a6); --warn: light-dark(#d98a2b, #f2b067); --bad: light-dark(#e05a76, #f58aa0);
+  --warnsoft: light-dark(#fff4e3, #3a2f22); --badsoft: light-dark(#fdebef, #3a2330);
+  --shadow: 0 2px 10px light-dark(rgba(110,90,170,.08), rgba(0,0,0,.3)); --shadow2: 0 8px 22px light-dark(rgba(110,90,170,.16), rgba(0,0,0,.45));
+  --r: 16px; --r-sm: 11px;
+  /* 플랫폼 색 */
+  --c-naver_blog: #03c75a; --c-naver_cafe: #2db400; --c-instagram: #e1306c; --c-tiktok: light-dark(#111, #eee);
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
-body { background: var(--bg); color: var(--ink); font: 14px/1.5 "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; display: flex; }
-nav { width: 92px; border-right: 1px solid var(--line); padding: 10px 6px; display: flex; flex-direction: column; gap: 4px; flex: none; }
-nav button { border: 0; background: none; color: var(--sub); padding: 8px 4px; border-radius: 8px; cursor: pointer; font: inherit; font-size: 13px; }
-nav button.on { background: var(--soft); color: var(--ink); font-weight: bold; }
+body {
+  color: var(--text); font: 14px/1.55 "Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; display: flex;
+  background: radial-gradient(1200px 600px at 0% 0%, var(--bg2), transparent 60%),
+              radial-gradient(1000px 600px at 100% 100%, var(--bg3), transparent 60%), var(--bg);
+  background-attachment: fixed;
+}
+::selection { background: var(--accentsoft); }
+
+/* 왼쪽 */
+nav { width: 168px; padding: 18px 12px; display: flex; flex-direction: column; gap: 4px; flex: none; }
+.logo { display: flex; align-items: center; gap: 8px; padding: 2px 8px 18px; }
+.logo .mark { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; font-size: 18px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2)); box-shadow: var(--shadow2); }
+.logo b { font-size: 15px; letter-spacing: -.3px; }
+.logo small { display: block; font-size: 11px; color: var(--muted); font-weight: normal; }
+nav button { border: 0; background: none; color: var(--muted); padding: 9px 12px; border-radius: var(--r-sm); cursor: pointer;
+  font: inherit; text-align: left; display: flex; gap: 8px; align-items: center; transition: .15s; }
+nav button:hover { background: var(--panel); color: var(--text); }
+nav button.on { background: var(--solid); color: var(--accent); font-weight: bold; box-shadow: var(--shadow); }
 nav .grow { flex: 1; }
-nav .claude { font-size: 11px; text-align: center; color: var(--sub); }
-nav .claude.bad { color: var(--err); }
-main { flex: 1; overflow: auto; padding: 14px 18px 40px; }
-section { display: none; max-width: 1100px; }
+.claude { font-size: 12px; color: var(--muted); padding: 8px 10px; border-radius: var(--r-sm); background: var(--panel); display: flex; gap: 6px; align-items: center; }
+.claude::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 20%, transparent); }
+.claude.bad::before { background: var(--bad); box-shadow: 0 0 0 3px color-mix(in srgb, var(--bad) 20%, transparent); }
+
+main { flex: 1; overflow: auto; padding: 22px 26px 60px 8px; }
+section { display: none; max-width: 1180px; animation: up .25s ease; }
 section.on { display: block; }
-h2 { font-size: 15px; margin: 0 0 10px; }
-.box { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
-textarea, input[type=text] { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font: inherit; background: var(--panel); color: var(--ink); }
+@keyframes up { from { opacity: 0; transform: translateY(6px); } }
+.head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 0 0 14px; }
+.head h1 { font-size: 21px; margin: 0; letter-spacing: -.5px; }
+.head p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+
+.box { background: var(--panel); backdrop-filter: blur(10px); border: 1px solid var(--line); border-radius: var(--r); padding: 16px 18px; margin-bottom: 14px; box-shadow: var(--shadow); }
+.step { display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 13.5px; margin: 0 0 8px; }
+.step i { font-style: normal; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px;
+  background: var(--accentsoft); color: var(--accent); }
+.step .hint { font-weight: normal; }
+.step + * { margin-bottom: 16px; }
+.grid2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
+@media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
+
+textarea, input[type=text] { width: 100%; border: 1.5px solid var(--line); border-radius: var(--r-sm); padding: 10px 12px; font: inherit;
+  background: var(--solid); color: var(--text); outline: none; transition: border-color .15s, box-shadow .15s; }
+textarea:focus, input[type=text]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accentsoft); }
 textarea { resize: vertical; }
-label.small { font-size: 12px; color: var(--sub); display: block; margin: 8px 0 4px; }
-button.btn { border: 1px solid var(--line); background: var(--chip); color: var(--ink); border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; }
-button.btn:hover { border-color: var(--accent); }
-button.main { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: bold; padding: 8px 18px; }
-button:disabled { opacity: .5; cursor: default; }
+::placeholder { color: color-mix(in srgb, var(--muted) 75%, transparent); }
+label.small { font-size: 12px; color: var(--muted); display: block; margin: 10px 0 5px; }
+
+button.btn { border: 1.5px solid var(--line); background: var(--solid); color: var(--text); border-radius: 999px; padding: 6px 14px;
+  font: inherit; font-size: 13px; cursor: pointer; transition: .15s; white-space: nowrap; }
+button.btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+button.main { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: var(--onaccent); border: 0; font-weight: bold; padding: 8px 18px; box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 35%, transparent); }
+button.main:hover:not(:disabled) { color: var(--onaccent); filter: brightness(1.06); transform: translateY(-1px); }
+button.big { padding: 11px 28px; font-size: 15px; }
+button:disabled { opacity: .45; cursor: default; }
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .row.between { justify-content: space-between; }
-.hint { font-size: 12px; color: var(--sub); }
-.drop { border: 2px dashed var(--line); border-radius: 10px; padding: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-height: 92px; }
-.drop.over { border-color: var(--accent); background: var(--soft); }
-.thumb { position: relative; width: 72px; height: 72px; border-radius: 8px; overflow: hidden; background: var(--chip); }
+.hint { font-size: 12px; color: var(--muted); }
+code { background: var(--accentsoft); color: var(--accent); padding: 0 5px; border-radius: 5px; font-size: 12px; }
+
+/* 사진 */
+.drop { border: 2px dashed var(--line); border-radius: var(--r); padding: 12px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+  min-height: 112px; background: var(--soft); transition: .15s; }
+.drop.over { border-color: var(--accent); background: var(--accentsoft); }
+.drop .add { width: 84px; height: 84px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--solid); color: var(--muted);
+  display: grid; place-items: center; cursor: pointer; font: inherit; font-size: 12px; line-height: 1.3; transition: .15s; }
+.drop .add span { font-size: 22px; display: block; }
+.drop .add:hover { border-color: var(--accent); color: var(--accent); }
+.drop .empty { color: var(--muted); font-size: 12.5px; }
+.thumb { position: relative; width: 84px; height: 84px; border-radius: 14px; overflow: hidden; background: var(--solid); box-shadow: var(--shadow); animation: up .2s ease; }
 .thumb img { width: 100%; height: 100%; object-fit: cover; }
-.thumb b { position: absolute; left: 3px; top: 2px; font-size: 11px; color: #fff; text-shadow: 0 0 3px #000; }
-.thumb button { position: absolute; right: 2px; top: 2px; border: 0; border-radius: 50%; width: 18px; height: 18px; font-size: 11px; line-height: 18px; padding: 0; background: rgba(0,0,0,.55); color: #fff; cursor: pointer; }
-.plats label { background: var(--chip); border-radius: 16px; padding: 4px 10px; cursor: pointer; user-select: none; }
-.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 12px; }
-.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-.card h3 { margin: 0; font-size: 14px; }
-.card .st { font-size: 12px; color: var(--sub); }
-.card .st.err { color: var(--err); white-space: pre-wrap; }
-.card textarea { min-height: 300px; font-size: 13.5px; }
-.chips { display: flex; flex-wrap: wrap; gap: 4px; }
-.chips button { border: 1px solid var(--line); background: none; color: var(--sub); border-radius: 14px; padding: 2px 9px; font: inherit; font-size: 12px; cursor: pointer; }
-.chips button:hover { color: var(--ink); border-color: var(--accent); }
-.count { font-size: 11px; color: var(--sub); }
-.spin { display: inline-block; width: 10px; height: 10px; border: 2px solid var(--accent); border-right-color: transparent; border-radius: 50%; animation: s 0.8s linear infinite; vertical-align: -1px; }
+.thumb b { position: absolute; left: 5px; bottom: 5px; font-size: 11px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+  background: rgba(255,255,255,.9); color: #333; display: grid; place-items: center; }
+.thumb button { position: absolute; right: 5px; top: 5px; border: 0; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; padding: 0;
+  background: rgba(30,25,45,.6); color: #fff; cursor: pointer; opacity: 0; transition: .15s; }
+.thumb:hover button { opacity: 1; }
+
+/* 플랫폼 고르기 */
+.plats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.plats label { position: relative; display: flex; align-items: center; gap: 9px; padding: 10px 12px; border-radius: var(--r-sm); cursor: pointer;
+  border: 1.5px solid var(--line); background: var(--solid); user-select: none; transition: .15s; font-size: 13.5px; }
+.plats label:hover { border-color: color-mix(in srgb, var(--pc) 50%, var(--line)); }
+.plats input { position: absolute; opacity: 0; pointer-events: none; }
+.plats label:has(input:checked) { border-color: var(--pc); background: color-mix(in srgb, var(--pc) 9%, var(--solid)); font-weight: bold; }
+.plats label::after { content: ""; margin-left: auto; width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--line); }
+.plats label:has(input:checked)::after { content: "✓"; border: 0; background: var(--pc); color: #fff; display: grid; place-items: center; font-size: 11px; }
+.pi { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; color: #fff; font-size: 12px; font-weight: bold; flex: none; background: var(--pc); }
+.pi.instagram { background: linear-gradient(45deg, #f9ce34, #ee2a7b, #6228d7); }
+.pi.tiktok { color: light-dark(#fff, #111); }
+
+.go { display: flex; align-items: center; gap: 12px; padding-top: 4px; }
+
+/* 결과 카드 */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(440px, 1fr)); gap: 14px; }
+.card { background: var(--panel); backdrop-filter: blur(10px); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; display: flex;
+  flex-direction: column; gap: 10px; box-shadow: var(--shadow); border-top: 4px solid var(--pc); animation: up .25s ease; }
+.card h3 { margin: 0; font-size: 14.5px; display: flex; align-items: center; gap: 8px; }
+.card .st { font-size: 12.5px; color: var(--muted); }
+.card .st:empty { display: none; }
+.card .st.warn { background: var(--warnsoft); color: var(--warn); padding: 6px 10px; border-radius: 9px; }
+.card .st.err { background: var(--badsoft); color: var(--bad); padding: 6px 10px; border-radius: 9px; white-space: pre-wrap; }
+.card textarea { min-height: 320px; font-size: 13.5px; line-height: 1.7; background: var(--solid); }
+.card.busy textarea { background: repeating-linear-gradient(90deg, var(--soft) 0 40%, var(--accentsoft) 50%, var(--soft) 60% 100%); background-size: 300% 100%; animation: shimmer 1.4s linear infinite; color: transparent; }
+@keyframes shimmer { to { background-position: -300% 0; } }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.chips button { border: 1px solid var(--line); background: var(--soft); color: var(--muted); border-radius: 999px; padding: 3px 11px; font: inherit; font-size: 12px; cursor: pointer; transition: .15s; }
+.chips button:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); background: var(--accentsoft); }
+.count { font-size: 11.5px; color: var(--muted); background: var(--soft); padding: 2px 9px; border-radius: 999px; }
+.count:empty { display: none; }
+.refine { display: flex; gap: 6px; }
+.refine input { flex: 1; }
+.actions { display: flex; gap: 6px; flex-wrap: wrap; border-top: 1px dashed var(--line); padding-top: 10px; }
+.actions .main { margin-right: auto; }
+.spin { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--accent); border-right-color: transparent; border-radius: 50%; animation: s .8s linear infinite; vertical-align: -2px; }
 @keyframes s { to { transform: rotate(360deg); } }
-.list .item { display: flex; gap: 10px; align-items: center; padding: 8px 4px; border-bottom: 1px solid var(--line); }
-.list .item:last-child { border: 0; }
+.blank { text-align: center; color: var(--muted); padding: 34px 10px; border: 2px dashed var(--line); border-radius: var(--r); font-size: 13px; }
+.blank .e { font-size: 30px; display: block; margin-bottom: 6px; }
+
+/* 목록 */
+.list .item { display: flex; gap: 10px; align-items: center; padding: 10px 8px; border-radius: var(--r-sm); }
+.list .item + .item { border-top: 1px solid var(--line); }
 .list .item .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.list .item.click { cursor: pointer; }
-.list .item.click:hover { background: var(--soft); }
-.tag { font-size: 11px; background: var(--chip); border-radius: 10px; padding: 1px 7px; color: var(--sub); }
-#toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 7px 14px; border-radius: 8px; font-size: 13px; display: none; z-index: 9; }
+.list .item.click { cursor: pointer; transition: .12s; }
+.list .item.click:hover { background: var(--accentsoft); }
+.list h2 { font-size: 14px; margin: 0 0 6px; }
+
+/* 도움말 */
+.helpgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 860px) { .helpgrid { grid-template-columns: 1fr; } }
+.helpgrid .box { margin: 0; }
+.helpgrid h2 { font-size: 15px; margin: 0 0 8px; display: flex; align-items: center; gap: 8px; }
+.helpgrid h2 .e { font-size: 20px; }
+.helpgrid ol, .helpgrid ul { margin: 0; padding-left: 20px; }
+.helpgrid li { margin: 4px 0; }
+.helpgrid li::marker { color: var(--accent); font-weight: bold; }
+.helpgrid p { margin: 6px 0; }
+.helpgrid .wide { grid-column: 1 / -1; }
+.pl { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; }
+.pl + .pl { border-top: 1px dashed var(--line); }
+.pl .pi { margin-top: 2px; }
+.ex { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+.ex div { border-radius: var(--r-sm); padding: 10px 12px; font-size: 13px; }
+.ex .bad { background: var(--badsoft); }
+.ex .good { background: color-mix(in srgb, var(--ok) 12%, var(--solid)); }
+.ex b { display: block; font-size: 12px; margin-bottom: 4px; }
+.faq details { padding: 9px 0; }
+.faq details + details { border-top: 1px solid var(--line); }
+.faq summary { cursor: pointer; font-weight: bold; }
+.faq summary::marker { color: var(--accent); }
+.faq details p { color: var(--muted); margin: 6px 0 0 16px; }
+.helplink { color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.date { font-size: 11.5px; color: var(--accent); background: var(--accentsoft); border-radius: 8px; padding: 2px 8px; font-weight: bold; flex: none; }
+.dots { display: flex; gap: 3px; flex: none; }
+.dots .pi { width: 20px; height: 20px; border-radius: 6px; font-size: 10px; }
+.tag { font-size: 11px; background: var(--soft); border-radius: 10px; padding: 2px 8px; color: var(--muted); flex: none; }
+
+#toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(10px); background: var(--text); color: var(--bg);
+  padding: 9px 18px; border-radius: 999px; font-size: 13px; opacity: 0; pointer-events: none; transition: .2s; z-index: 9; box-shadow: var(--shadow2); }
+#toast.on { opacity: 1; transform: translateX(-50%); }
 </style>
 </head>
 <body>
 <nav>
-  <button data-tab="write" class="on">✍ 쓰기</button>
-  <button data-tab="voice">🗣 내 말투</button>
+  <div class="logo"><div class="mark">📝</div><b>글 도우미<small>내 말투로 쓰는 SNS 글</small></b></div>
+  <button data-tab="write" class="on">✍️ 쓰기</button>
+  <button data-tab="voice">🗣️ 내 말투</button>
   <button data-tab="posts">📂 지난 글</button>
+  <button data-tab="help">❓ 도움말</button>
   <div class="grow"></div>
-  <div class="claude" id="claude"></div>
+  <div class="claude" id="claude">확인 중…</div>
 </nav>
 <main>
   <section id="write" class="on">
+    <div class="head">
+      <div><h1 id="postName">새 글</h1><p>사진과 메모만 주세요. 플랫폼에 맞춰 내 말투로 써 드려요. <span class="helplink" data-go="help">처음이세요?</span></p></div>
+      <button class="btn" id="newPost">＋ 새 글</button>
+    </div>
     <div class="box">
-      <div class="row between"><h2 id="postName">새 글</h2><button class="btn" id="newPost">＋ 새 글</button></div>
-      <label class="small">메모 — 직접 겪은 사실일수록 내 글 같아집니다(가격·시간·아쉬운 점·작은 디테일). 협찬이면 <code>#협찬</code></label>
-      <textarea id="memo" rows="4" placeholder="예) 을지로 OO집 김치찌개 7천원. 점심 웨이팅 20분. 고기 많음, 국물은 좀 짰음. 공깃밥 리필 무료"></textarea>
-      <label class="small">제목 후보(비워도 됨)</label>
-      <input type="text" id="title">
-      <label class="small">사진 — 끌어다 놓거나 고르세요(앞 10장을 봅니다, 순서 = 글 순서)</label>
+      <div class="grid2">
+        <div>
+          <div class="step"><i>1</i>메모 <span class="hint">— 직접 겪은 사실일수록 내 글 같아져요</span></div>
+          <textarea id="memo" rows="5" placeholder="예) 을지로 OO집 김치찌개 7천원. 점심 웨이팅 20분. 고기 많음, 국물은 좀 짰음. 공깃밥 리필 무료"></textarea>
+          <label class="small">제목 후보 (비워도 돼요) · 협찬이면 메모에 <code>#협찬</code></label>
+          <input type="text" id="title">
+        </div>
+        <div>
+          <div class="step"><i>2</i>어디에 올릴까요?</div>
+          <div class="plats" id="plats"></div>
+        </div>
+      </div>
+      <div class="step" style="margin-top:14px"><i>3</i>사진 <span class="hint">— 끌어다 놓기 · 붙여넣기 · 앞 10장을 봐요 (순서 = 글 순서)</span></div>
       <div class="drop" id="drop">
-        <button class="btn" id="pick">사진 고르기</button>
+        <button class="add" id="pick"><div><span>＋</span>사진 고르기</div></button>
+        <span class="empty" id="dropEmpty">여기에 사진을 끌어다 놓아도 돼요</span>
         <input type="file" id="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden>
       </div>
-      <label class="small">어디에 올릴 글?</label>
-      <div class="row plats" id="plats"></div>
-      <div class="row" style="margin-top:12px"><button class="btn main" id="go">글 만들기</button><span class="hint" id="goHint"></span></div>
+      <div class="go"><button class="btn main big" id="go">✨ 글 만들기</button><span class="hint" id="goHint"></span></div>
     </div>
     <div class="cards" id="cards"></div>
+    <div class="blank" id="blank"><span class="e">🪄</span>글 만들기를 누르면 여기에 플랫폼별 글이 나와요.<br>마음에 안 들면 「짧게」「캐주얼하게」 버튼이나 말로 다듬으면 돼요.</div>
   </section>
 
   <section id="voice">
+    <div class="head"><div><h1>내 말투</h1><p>예전에 직접 쓴 글을 3~10편 넣어 두면 그 말투(문장 길이·끝맺음·이모지 습관)를 따라 써요. 내용은 가져오지 않아요.</p></div></div>
     <div class="box">
-      <h2>내 말투</h2>
-      <p class="hint">예전에 직접 쓴 글을 3~10편 넣어 두면 그 말투(문장 길이·끝맺음·이모지 습관)를 따라 씁니다. 내용은 가져오지 않습니다. 최근 5편을 씁니다.</p>
-      <label class="small">말투 메모</label>
+      <div class="step"><i>✎</i>말투 메모</div>
       <div class="row"><input type="text" id="voiceNote" placeholder="예) ~했어요 체, 이모지 거의 안 씀, 문단 짧게" style="flex:1"><button class="btn" id="saveNote">저장</button></div>
-      <label class="small">내가 쓴 글 붙여넣기</label>
-      <textarea id="voiceText" rows="6"></textarea>
-      <div class="row" style="margin-top:8px"><button class="btn main" id="addVoice">넣기</button></div>
+      <div class="step" style="margin-top:16px"><i>＋</i>내가 쓴 글 붙여넣기 <span class="hint">— 최근 5편을 써요</span></div>
+      <textarea id="voiceText" rows="6" placeholder="블로그·인스타에 예전에 직접 쓴 글을 통째로 붙여 넣으세요"></textarea>
+      <div class="row" style="margin-top:10px"><button class="btn main" id="addVoice">넣기</button></div>
     </div>
     <div class="box list" id="voiceList"></div>
     <div class="box">
-      <h2>설정</h2>
-      <label class="small">네이버 카페 글쓰기 주소(카페마다 다름 — 카페 글쓰기 화면 주소를 붙여 넣으세요)</label>
+      <div class="step"><i>⚙</i>설정</div>
+      <label class="small">네이버 카페 글쓰기 주소 (카페마다 달라요 — 카페 글쓰기 화면 주소를 붙여 넣으세요)</label>
       <div class="row"><input type="text" id="cafeUrl" placeholder="https://cafe.naver.com/..." style="flex:1"><button class="btn" id="saveCafe">저장</button></div>
-      <div class="row" style="margin-top:10px"><button class="btn" id="openData">데이터 폴더 열기</button>
-        <span class="hint">올리기는 직접 합니다 — 자동 발행은 계정 정지 위험 때문에 일부러 넣지 않았습니다.</span></div>
+      <div class="row" style="margin-top:12px"><button class="btn" id="openData">📁 데이터 폴더 열기</button>
+        <span class="hint">올리기는 직접 해요 — 자동 발행은 계정 정지 위험 때문에 일부러 넣지 않았어요.</span></div>
     </div>
   </section>
 
   <section id="posts">
+    <div class="head"><div><h1>지난 글</h1><p>눌러서 열면 이어서 다듬을 수 있어요.</p></div></div>
     <div class="box list" id="postList"></div>
+  </section>
+
+  <section id="help">
+    <div class="head"><div><h1>도움말</h1><p>3분이면 다 읽어요. 처음 한 번만 보면 돼요.</p></div>
+      <button class="btn main" data-go="write">✍️ 바로 써 보기</button></div>
+    <div class="helpgrid">
+      <div class="box">
+        <h2><span class="e">🚀</span>처음 한 번만</h2>
+        <ol>
+          <li><b>Claude Code</b> 를 설치하고, 터미널에서 <code>claude</code> 를 한 번 실행해 로그인해요.</li>
+          <li>왼쪽 아래가 <b>● AI 연결됨</b> 이면 준비 끝.</li>
+          <li><b>🗣️ 내 말투</b>에 예전에 직접 쓴 글을 3~5편 넣어 두면 훨씬 내 글 같아져요.</li>
+          <li>네이버 카페에 올린다면 <b>🗣️ 내 말투 → 설정</b>에 카페 글쓰기 주소를 넣어요.</li>
+        </ol>
+      </div>
+      <div class="box">
+        <h2><span class="e">✍️</span>글 쓰는 순서</h2>
+        <ol>
+          <li><b>메모</b> — 직접 겪은 사실을 짧게. 문장이 아니어도 돼요.</li>
+          <li><b>어디에 올릴지</b> 고르기 — 여러 개 골라도 한 번에 써요.</li>
+          <li><b>사진</b> 넣기 — 끌어다 놓거나 <kbd>Ctrl</kbd>+<kbd>V</kbd>. AI 가 사진을 직접 보고 글에 반영해요.</li>
+          <li><b>✨ 글 만들기</b> — 30초~1분.</li>
+          <li><b>다듬기</b> — 「짧게」「캐주얼하게」 버튼이나 말로 부탁해요. 직접 고쳐도 자동 저장돼요.</li>
+          <li><b>📋 복사 → ✏️ 글쓰기 창 열기</b> → 붙여 넣고 사진 올리고 <b>발행은 직접</b>.</li>
+        </ol>
+      </div>
+      <div class="box wide">
+        <h2><span class="e">🌱</span>AI 티 안 나는 글 만드는 법</h2>
+        <p>네이버가 떨어뜨리는 건 "AI 가 쓴 글"이라기보다 <b>어디서 본 듯한 뻔한 글</b>이에요. 재료가 구체적일수록 내 글이 돼요.</p>
+        <div class="ex">
+          <div class="bad"><b>😐 이런 메모는 뻔한 글이 돼요</b>을지로 김치찌개 맛집 다녀옴. 맛있었음. 추천</div>
+          <div class="good"><b>😊 이런 메모가 좋아요</b>을지로 OO집 김치찌개 7천원. 12시 10분 도착, 웨이팅 20분. 고기 큼직, 국물은 좀 짰음. 공깃밥 리필 무료. 옆 테이블 다 계란말이 시킴</div>
+        </div>
+        <ul style="margin-top:10px">
+          <li><b>숫자·시간·작은 디테일</b> — 가격, 기다린 시간, 사장님 한마디, 옆 테이블 같은 것.</li>
+          <li><b>아쉬운 점도 하나</b> — 좋은 말만 있으면 광고처럼 보여요.</li>
+          <li><b>내 사진</b> — 사진에 보이는 걸 AI 가 글에 녹여요. 남의 사진은 쓰지 마세요.</li>
+          <li><b>[확인: …]</b> 자리는 AI 가 지어내지 않고 비워 둔 곳이에요. 꼭 직접 채워요.</li>
+          <li>나온 글에서 <b>한두 문장은 내 손으로</b> 고쳐 보세요. 그게 제일 확실해요.</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h2><span class="e">📮</span>플랫폼별 올리는 법</h2>
+        <div class="pl"><span class="pi naver_blog" style="--pc:var(--c-naver_blog)">b</span><div><b>네이버 블로그</b> — 첫 줄이 제목이에요. 본문의 <code>[사진 1]</code> 자리에 사진을 순서대로 넣고 그 표시는 지워요. 해시태그는 맨 끝.</div></div>
+        <div class="pl"><span class="pi naver_cafe" style="--pc:var(--c-naver_cafe)">C</span><div><b>네이버 카페</b> — 첫 줄이 제목. 게시판을 고르고 붙여 넣어요.</div></div>
+        <div class="pl"><span class="pi instagram">◎</span><div><b>인스타그램</b> — 사진을 먼저 고르고, 문구 칸에 붙여 넣어요. 폰으로 올린다면 복사한 글을 카톡 나에게 보내기 등으로 옮기면 편해요.</div></div>
+        <div class="pl"><span class="pi tiktok" style="--pc:var(--c-tiktok)">♪</span><div><b>틱톡</b> — <code>[캡션]</code> 은 영상 설명에, <code>[자막 대본]</code> 은 편집할 때 사진 위에 한 줄씩 얹어요. <code>(사진 2)</code> 는 어느 사진 위에 얹을지예요.</div></div>
+      </div>
+      <div class="box">
+        <h2><span class="e">💡</span>다듬기 예시</h2>
+        <ul>
+          <li>"가격 얘기를 맨 앞으로"</li>
+          <li>"반말로, 친구한테 말하듯이"</li>
+          <li>"두 번째 문단 빼 줘"</li>
+          <li>"주차 정보는 없으니까 그 줄 지워"</li>
+          <li>"20대 여자 말투 말고 30대 직장인 느낌으로"</li>
+          <li>"제목 5개 후보 줘" → 마음에 드는 걸 골라 직접 고쳐요</li>
+        </ul>
+        <p class="hint">다듬기는 바로 전 글을 기억하고 있어서 "방금 거에서 ~만" 이 통해요.</p>
+      </div>
+      <div class="box faq wide">
+        <h2><span class="e">🙋</span>자주 묻는 질문</h2>
+        <details><summary>왜 자동으로 올려 주지 않나요?</summary><p>네이버는 자동 프로그램으로 글을 올리는 걸 약관으로 막고 있어서, 걸리면 저품질 처리나 계정 정지가 될 수 있어요. 그래서 글 만들기까지만 하고 올리기는 직접 해요.</p></details>
+        <details><summary>협찬·광고 글은요?</summary><p>메모에 <code>#협찬</code> 이나 <code>#광고</code> 를 넣으면 첫 줄에 표기 문장이 들어가요. 협찬 글에 표기를 빼면 표시광고법 위반이 될 수 있어요.</p></details>
+        <details><summary>글이 안 나오고 오류가 떠요.</summary><p>왼쪽 아래가 빨간 점이면 claude 를 못 찾은 거예요. 설치 후 터미널에서 <code>claude</code> 를 실행해 로그인이 되어 있는지 확인하고 앱을 다시 켜 주세요. 사용량 한도에 걸렸을 때도 오류가 나요 — 잠시 뒤 다시 해 보세요.</p></details>
+        <details><summary>만든 글과 사진은 어디에 저장되나요?</summary><p>이 PC 의 <code>%APPDATA%\PostKit</code> 에만 있어요. <b>🗣️ 내 말투 → 📁 데이터 폴더 열기</b>로 볼 수 있어요. 📂 지난 글에서 다시 열어 이어서 다듬을 수 있어요.</p></details>
+        <details><summary>앱은 어떻게 끄나요?</summary><p>창을 닫으면 1분 안에 저절로 꺼져요. 글을 만드는 중이면 끝난 뒤에 꺼져요.</p></details>
+      </div>
+    </div>
   </section>
 </main>
 <div id="toast"></div>
@@ -123,11 +322,12 @@ const TOKEN = "__TOKEN__";
 const QUICK = [["짧게", "지금 길이의 절반 정도로 줄여 줘"], ["길게", "조금 더 자세하게 늘려 줘. 재료에 없는 사실은 넣지 말고"],
                ["캐주얼하게", "더 편하고 친근한 말투로"], ["정중하게", "조금 더 정중한 말투로"],
                ["첫 문장 다시", "첫 문장을 더 눈길 가게 다시 써 줘"], ["해시태그 다시", "본문은 그대로 두고 해시태그만 다시 골라 줘"]];
+const ICON = { naver_blog: "b", naver_cafe: "C", instagram: "◎", tiktok: "♪" };
 let S = { platforms: [], config: {}, name: "", photos: [], texts: {}, busy: {} };
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-function toast(t) { const e = $("#toast"); e.textContent = t; e.style.display = "block"; clearTimeout(toast.h); toast.h = setTimeout(() => e.style.display = "none", 2200); }
+function toast(t) { const e = $("#toast"); e.textContent = t; e.classList.add("on"); clearTimeout(toast.h); toast.h = setTimeout(() => e.classList.remove("on"), 2400); }
 async function api(path, body, raw) {
   const opt = body === undefined ? {} : { method: "POST", headers: { "X-Token": TOKEN }, body: raw ? body : JSON.stringify(body) };
   if (body !== undefined && !raw) opt.headers["Content-Type"] = "application/json";
@@ -137,13 +337,21 @@ async function api(path, body, raw) {
   return d;
 }
 const fail = e => toast(e.message || String(e));
+const pc = p => `--pc: var(--c-${p}, var(--accent))`;
+const picon = p => `<span class="pi ${esc(p)}" style="${pc(p)}">${ICON[p] || "•"}</span>`;
 
 // 탭
 document.querySelectorAll("nav button[data-tab]").forEach(b => b.onclick = () => {
   document.querySelectorAll("nav button[data-tab]").forEach(x => x.classList.toggle("on", x === b));
   document.querySelectorAll("section").forEach(s => s.classList.toggle("on", s.id === b.dataset.tab));
   if (b.dataset.tab === "posts") loadPosts();
+  main.scrollTop = 0;
 });
+const main = document.querySelector("main");
+const goTab = t => document.querySelector(`nav button[data-tab="${t}"]`).click();
+document.querySelectorAll("[data-go]").forEach(el => el.onclick = () => goTab(el.dataset.go));
+// 처음 켰을 땐 도움말부터
+try { if (!localStorage.getItem("seenHelp")) { localStorage.setItem("seenHelp", "1"); goTab("help"); } } catch (e) {}
 
 // 창이 열려 있다는 신호(끊기면 서버가 스스로 끝난다)
 setInterval(() => fetch("/api/ping").catch(() => {}), 10000);
@@ -153,17 +361,17 @@ async function loadState() {
   const d = await api("/api/state");
   S.platforms = d.platforms; S.config = d.config;
   const c = $("#claude");
-  c.textContent = d.claude ? "claude 연결됨" : "claude 없음";
+  c.textContent = d.claude ? "AI 연결됨" : "claude 없음";
   c.className = "claude" + (d.claude ? "" : " bad");
   c.title = d.claude || d.no_claude;
   if (!d.claude) toast(d.no_claude);
   $("#plats").innerHTML = d.platforms.map(p =>
-    `<label><input type="checkbox" value="${esc(p.id)}" ${d.config.default_platforms.includes(p.id) ? "checked" : ""}> ${esc(p.name)}</label>`).join("");
+    `<label style="${pc(p.id)}"><input type="checkbox" value="${esc(p.id)}" ${d.config.default_platforms.includes(p.id) ? "checked" : ""}>${picon(p.id)}${esc(p.name)}</label>`).join("");
   $("#voiceNote").value = d.config.voice_note || "";
   $("#cafeUrl").value = (d.config.write_urls || {}).naver_cafe || "";
   $("#voiceList").innerHTML = d.voice.length ? "<h2>넣은 글 " + d.voice.length + "편</h2>" + d.voice.map(v =>
     `<div class="item"><span class="t">${esc(v.text.replace(/\s+/g, " ").slice(0, 120))}</span><button class="btn" data-del="${esc(v.name)}">빼기</button></div>`).join("")
-    : '<p class="hint">아직 넣은 글이 없습니다. 없어도 쓸 수 있지만, 넣으면 내 글처럼 나옵니다.</p>';
+    : '<div class="blank"><span class="e">🗣️</span>아직 넣은 글이 없어요. 없어도 쓸 수 있지만, 넣으면 훨씬 내 글처럼 나와요.</div>';
   $("#voiceList").querySelectorAll("[data-del]").forEach(b => b.onclick = () =>
     api("/api/voice/delete", { name: b.dataset.del }).then(loadState).catch(fail));
 }
@@ -172,6 +380,7 @@ async function loadState() {
 function renderPhotos() {
   const drop = $("#drop");
   drop.querySelectorAll(".thumb").forEach(t => t.remove());
+  $("#dropEmpty").style.display = S.photos.length ? "none" : "";
   S.photos.forEach((f, i) => {
     const t = document.createElement("div");
     t.className = "thumb";
@@ -194,7 +403,7 @@ async function ensurePost() {
 
 async function addFiles(files) {
   files = [...files].filter(f => /^image\/(jpeg|png|webp|gif)$/.test(f.type));
-  if (!files.length) return toast("jpg·png·webp·gif 사진만 넣을 수 있습니다.");
+  if (!files.length) return toast("jpg·png·webp·gif 사진만 넣을 수 있어요.");
   try {
     await ensurePost();
     for (const f of files) {
@@ -216,16 +425,18 @@ document.addEventListener("paste", e => {
   if (fs.length) { e.preventDefault(); addFiles(fs); }
 });
 
+function showBlank() { $("#blank").style.display = $("#cards").children.length ? "none" : ""; }
+
 $("#newPost").onclick = () => {
-  if (Object.values(S.busy).some(Boolean)) return toast("글을 만드는 중입니다. 끝난 뒤에 새 글을 여세요.");
+  if (Object.values(S.busy).some(Boolean)) return toast("글을 만드는 중이에요. 끝난 뒤에 새 글을 여세요.");
   S.name = ""; S.photos = []; S.texts = {};
   $("#memo").value = ""; $("#title").value = ""; $("#postName").textContent = "새 글";
-  renderPhotos(); $("#cards").innerHTML = "";
+  renderPhotos(); $("#cards").innerHTML = ""; showBlank();
 };
 
 $("#go").onclick = async () => {
   const pids = [...document.querySelectorAll("#plats input:checked")].map(x => x.value);
-  if (!pids.length) return toast("어디에 올릴 글인지 하나 이상 고르세요.");
+  if (!pids.length) return toast("어디에 올릴 글인지 하나 이상 골라 주세요.");
   if (!$("#memo").value.trim() && !S.photos.length) return toast("메모나 사진을 넣어 주세요.");
   $("#go").disabled = true;
   try {
@@ -233,7 +444,7 @@ $("#go").onclick = async () => {
     api("/api/config", { default_platforms: pids }).catch(() => {});
     const { job } = await api("/api/gen", { name: S.name, platforms: pids });
     pids.forEach(p => { S.busy[p] = true; S.texts[p] = S.texts[p] || ""; card(p, "running"); });
-    $("#goHint").innerHTML = '<span class="spin"></span> 쓰는 중… (사진이 많으면 1분쯤)';
+    $("#goHint").innerHTML = '<span class="spin"></span> 쓰는 중… 사진이 많으면 1분쯤 걸려요';
     poll(job, S.name);
   } catch (e) { fail(e); $("#go").disabled = false; }
 };
@@ -260,33 +471,36 @@ function card(p, status, error) {
   let c = document.getElementById("card-" + p);
   if (!c) {
     c = document.createElement("div");
-    c.className = "card"; c.id = "card-" + p;
-    c.innerHTML = `<div class="row between"><h3>${esc(plat(p).name)}</h3><span class="count"></span></div>
+    c.className = "card"; c.id = "card-" + p; c.style.cssText = pc(p);
+    c.innerHTML = `<div class="row between"><h3>${picon(p)}${esc(plat(p).name)}</h3><span class="count"></span></div>
       <div class="st"></div>
       <textarea spellcheck="false"></textarea>
       <div class="chips">${QUICK.map(([l, t]) => `<button data-q="${esc(t)}">${esc(l)}</button>`).join("")}</div>
-      <div class="row"><input type="text" class="ins" placeholder="다듬기 — 예) 가격 얘기를 앞으로, 반말로" style="flex:1"><button class="btn rf">다듬기</button></div>
-      <div class="row"><button class="btn main cp">복사</button><button class="btn wr">글쓰기 창 열기</button><button class="btn fd">사진 폴더</button></div>`;
+      <div class="refine"><input type="text" class="ins" placeholder="말로 다듬기 — 예) 가격 얘기를 앞으로, 반말로"><button class="btn rf">다듬기</button></div>
+      <div class="actions"><button class="btn main cp">📋 복사</button><button class="btn wr">✏️ 글쓰기 창 열기</button><button class="btn fd">🖼 사진 폴더</button></div>`;
     const ta = c.querySelector("textarea");
     ta.oninput = () => { S.texts[p] = ta.value; count(c, ta.value); clearTimeout(ta.h); ta.h = setTimeout(() =>
       api("/api/text", { name: S.name, platform: p, text: ta.value }).catch(fail), 800); };
     c.querySelectorAll("[data-q]").forEach(b => b.onclick = () => refine(p, b.dataset.q));
     c.querySelector(".rf").onclick = () => refine(p, c.querySelector(".ins").value);
     c.querySelector(".ins").onkeydown = e => { if (e.key === "Enter" && !e.isComposing) refine(p, e.target.value); };
-    c.querySelector(".cp").onclick = () => navigator.clipboard.writeText(ta.value).then(() => toast("복사했습니다 — 글쓰기 창에 붙여 넣으세요."), fail);
+    c.querySelector(".cp").onclick = () => navigator.clipboard.writeText(ta.value).then(() => toast("복사했어요 — 글쓰기 창에 붙여 넣으세요."), fail);
     c.querySelector(".wr").onclick = () => api("/api/open", { what: "write", platform: p }).catch(fail);
     c.querySelector(".fd").onclick = () => api("/api/open", { what: "folder", name: S.name }).catch(fail);
     $("#cards").appendChild(c);
+    showBlank();
   }
   const ta = c.querySelector("textarea"), st = c.querySelector(".st");
   const busy = status === "running";
+  c.classList.toggle("busy", busy);
   c.querySelectorAll("button, input, textarea").forEach(x => x.disabled = busy);
-  st.className = "st" + (status === "error" ? " err" : "");
-  st.innerHTML = busy ? '<span class="spin"></span> 쓰는 중…' : status === "error" ? esc(error || "실패했습니다.") :
-    (/\[확인:/.test(S.texts[p] || "") ? "⚠ <b>[확인: …]</b> 자리는 직접 채우세요." : "");
+  const check = !busy && status !== "error" && /\[확인:/.test(S.texts[p] || "");
+  st.className = "st" + (status === "error" ? " err" : check ? " warn" : "");
+  st.innerHTML = busy ? '<span class="spin"></span> 쓰는 중…' : status === "error" ? esc(error || "실패했어요.") :
+    check ? "⚠️ <b>[확인: …]</b> 자리는 AI 가 모르는 정보예요. 직접 채워 주세요." : "";
   if (!busy) { ta.value = S.texts[p] || ""; count(c, ta.value); }
 }
-function count(c, t) { c.querySelector(".count").textContent = t ? t.replace(/\s/g, "").length + "자(공백 제외)" : ""; }
+function count(c, t) { c.querySelector(".count").textContent = t ? t.replace(/\s/g, "").length + "자" : ""; }
 
 async function refine(p, instruction) {
   if (!instruction.trim()) return toast("어떻게 다듬을지 적어 주세요.");
@@ -302,32 +516,34 @@ async function refine(p, instruction) {
 
 // ---------- 내 말투 ----------
 $("#addVoice").onclick = () => api("/api/voice", { text: $("#voiceText").value })
-  .then(() => { $("#voiceText").value = ""; toast("넣었습니다."); loadState(); }).catch(fail);
-$("#saveNote").onclick = () => api("/api/config", { voice_note: $("#voiceNote").value }).then(() => toast("저장했습니다.")).catch(fail);
+  .then(() => { $("#voiceText").value = ""; toast("넣었어요."); loadState(); }).catch(fail);
+$("#saveNote").onclick = () => api("/api/config", { voice_note: $("#voiceNote").value }).then(() => toast("저장했어요.")).catch(fail);
 $("#saveCafe").onclick = () => {
   const u = $("#cafeUrl").value.trim();
   if (u && !u.startsWith("https://")) return toast("https:// 로 시작하는 주소를 넣어 주세요.");
-  api("/api/config", { write_urls: Object.assign({}, S.config.write_urls, { naver_cafe: u }) }).then(() => { toast("저장했습니다."); loadState(); }).catch(fail);
+  api("/api/config", { write_urls: Object.assign({}, S.config.write_urls, { naver_cafe: u }) }).then(() => { toast("저장했어요."); loadState(); }).catch(fail);
 };
 $("#openData").onclick = () => api("/api/open", { what: "data" }).catch(fail);
 
 // ---------- 지난 글 ----------
+const day = n => /^\d{8}/.test(n) ? n.slice(4, 6) + "." + n.slice(6, 8) : "";
 async function loadPosts() {
   const rows = await api("/api/posts").catch(e => { fail(e); return []; });
   $("#postList").innerHTML = rows.length ? rows.map(r =>
-    `<div class="item click" data-name="${esc(r.name)}"><span class="tag">${esc(r.name.slice(0, 8))}</span><span class="t">${esc(r.memo || "(메모 없음)")}</span>` +
-    r.platforms.map(p => `<span class="tag">${esc(plat(p).name)}</span>`).join("") + (r.photos ? `<span class="tag">사진 ${r.photos}</span>` : "") + "</div>").join("")
-    : '<p class="hint">아직 만든 글이 없습니다.</p>';
+    `<div class="item click" data-name="${esc(r.name)}"><span class="date">${esc(day(r.name))}</span><span class="t">${esc(r.memo || "(메모 없음)")}</span>` +
+    (r.photos ? `<span class="tag">🖼 ${r.photos}</span>` : "") + `<span class="dots">${r.platforms.map(picon).join("")}</span></div>`).join("")
+    : '<div class="blank"><span class="e">📭</span>아직 만든 글이 없어요.</div>';
   $("#postList").querySelectorAll("[data-name]").forEach(el => el.onclick = () => openPost(el.dataset.name));
 }
 async function openPost(name) {
-  if (Object.values(S.busy).some(Boolean)) return toast("글을 만드는 중입니다. 끝난 뒤에 여세요.");
+  if (Object.values(S.busy).some(Boolean)) return toast("글을 만드는 중이에요. 끝난 뒤에 여세요.");
   try {
     const d = await api("/api/post?name=" + encodeURIComponent(name));
     S.name = d.name; S.photos = d.photos; S.texts = d.texts;
     $("#memo").value = d.memo; $("#title").value = d.title; $("#postName").textContent = d.name;
     renderPhotos(); $("#cards").innerHTML = "";
     Object.keys(d.texts).forEach(p => card(p, "done"));
+    showBlank();
     document.querySelector('nav button[data-tab="write"]').click();
   } catch (e) { fail(e); }
 }

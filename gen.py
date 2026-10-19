@@ -47,11 +47,23 @@ def find_claude():
 
 
 def photo_names(post_dir):
-    """글 폴더 photos\\ 안 사진 이름(이름순)."""
+    """글 폴더 photos\\ 안 사진 이름 — order.json(화면에서 끌어 바꾼 순서)대로, 거기 없는 건 뒤에 이름순."""
     d = os.path.join(post_dir, "photos")
     if not os.path.isdir(d):
         return []
-    return sorted(n for n in os.listdir(d) if n.lower().endswith(PHOTO_EXT))
+    have = sorted(n for n in os.listdir(d) if n.lower().endswith(PHOTO_EXT))
+    try:
+        with open(os.path.join(post_dir, "order.json"), encoding="utf-8") as f:
+            order = [n for n in json.load(f) if n in have]
+    except (OSError, ValueError, TypeError):
+        order = []
+    order = list(dict.fromkeys(order))
+    return order + [n for n in have if n not in order]
+
+
+def save_photo_order(post_dir, names):
+    with open(os.path.join(post_dir, "order.json"), "w", encoding="utf-8") as f:
+        json.dump([str(n) for n in names], f, ensure_ascii=False)
 
 
 def load_voice(voice_dir):

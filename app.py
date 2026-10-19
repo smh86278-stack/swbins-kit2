@@ -326,6 +326,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 if gen.inside(d, p) and os.path.isfile(p):
                     os.remove(p)
                 return self.send(200, {"ok": True})
+            if u.path == "/api/photo/order":
+                d = post_path(b.get("name", ""))
+                have = set(gen.photo_names(d))
+                gen.save_photo_order(d, [n for n in b.get("files") or [] if n in have])
+                return self.send(200, {"photos": gen.photo_names(d)})
             if u.path == "/api/gen":
                 d = post_path(b.get("name", ""))
                 if not gen.find_claude():

@@ -101,6 +101,9 @@ class PathTest(unittest.TestCase):
             for n in ("b.JPG", "a.png", "memo.txt"):
                 open(os.path.join(root, "photos", n), "w").close()
             self.assertEqual(gen.photo_names(root), ["a.png", "b.JPG"])
+            open(os.path.join(root, "photos", "c.jpg"), "w").close()
+            gen.save_photo_order(root, ["b.JPG", "없는것.jpg", "b.JPG", "a.png"])
+            self.assertEqual(gen.photo_names(root), ["b.JPG", "a.png", "c.jpg"])     # 새로 넣은 건 뒤에
 
 
 if __name__ == "__main__":

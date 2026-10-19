@@ -97,6 +97,10 @@ code { background: var(--accentsoft); color: var(--accent); padding: 0 5px; bord
 .thumb button { position: absolute; right: 5px; top: 5px; border: 0; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; padding: 0;
   background: rgba(30,25,45,.6); color: #fff; cursor: pointer; opacity: 0; transition: .15s; }
 .thumb:hover button { opacity: 1; }
+.thumb { cursor: grab; transition: transform .12s, opacity .12s; }
+.thumb.dragging { opacity: .35; }
+.thumb.target { transform: translateX(6px); box-shadow: -4px 0 0 var(--accent), var(--shadow); }
+.thumb img { pointer-events: none; }
 
 /* 플랫폼 고르기 */
 .plats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -211,13 +215,15 @@ code { background: var(--accentsoft); color: var(--accent); padding: 0 5px; bord
           <div class="plats" id="plats"></div>
         </div>
       </div>
-      <div class="step" style="margin-top:14px"><i>3</i>사진 <span class="hint">— 끌어다 놓기 · 붙여넣기 · 앞 10장을 봐요 (순서 = 글 순서)</span></div>
+      <div class="step" style="margin-top:14px"><i>3</i>사진 <span class="hint">— 끌어다 놓기 · 붙여넣기 · 앞 10장을 봐요 · 사진을 끌어서 순서를 바꿔요 (순서 = 글 순서)</span></div>
       <div class="drop" id="drop">
         <button class="add" id="pick"><div><span>＋</span>사진 고르기</div></button>
         <span class="empty" id="dropEmpty">여기에 사진을 끌어다 놓아도 돼요</span>
         <input type="file" id="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden>
       </div>
-      <div class="go"><button class="btn main big" id="go">✨ 글 만들기</button><span class="hint" id="goHint"></span></div>
+      <div class="go"><button class="btn main big" id="go">✨ 글 만들기</button>
+        <button class="btn" id="goNew" hidden title="이미 만든 글은 그대로 두고, 새로 체크한 곳 글만 만들어요">＋ 새로 고른 곳만 만들기</button>
+        <span class="hint" id="goHint"></span></div>
     </div>
     <div class="cards" id="cards"></div>
     <div class="blank" id="blank"><span class="e">🪄</span>글 만들기를 누르면 여기에 플랫폼별 글이 나와요.<br>마음에 안 들면 「짧게」「캐주얼하게」 버튼이나 말로 다듬으면 돼요.</div>
@@ -266,7 +272,7 @@ code { background: var(--accentsoft); color: var(--accent); padding: 0 5px; bord
           <li><b>메모</b> — 직접 겪은 사실을 짧게. 문장이 아니어도 돼요.</li>
           <li><b>어디에 올릴지</b> 고르기 — 여러 개 골라도 한 번에 써요.</li>
           <li><b>사진</b> 넣기 — 끌어다 놓거나 <kbd>Ctrl</kbd>+<kbd>V</kbd>. AI 가 사진을 직접 보고 글에 반영해요.</li>
-          <li><b>✨ 글 만들기</b> — 30초~1분.</li>
+          <li><b>✨ 글 만들기</b> — 30초~1분. 나중에 다른 플랫폼이 더 필요하면 체크하고 <b>＋ 새로 고른 곳만 만들기</b>.</li>
           <li><b>다듬기</b> — 「짧게」「캐주얼하게」 버튼이나 말로 부탁해요. 직접 고쳐도 자동 저장돼요.</li>
           <li><b>📋 복사 → ✏️ 글쓰기 창 열기</b> → 붙여 넣고 사진 올리고 <b>발행은 직접</b>.</li>
         </ol>
@@ -288,8 +294,8 @@ code { background: var(--accentsoft); color: var(--accent); padding: 0 5px; bord
       </div>
       <div class="box">
         <h2><span class="e">📮</span>플랫폼별 올리는 법</h2>
-        <div class="pl"><span class="pi naver_blog" style="--pc:var(--c-naver_blog)">b</span><div><b>네이버 블로그</b> — 첫 줄이 제목이에요. 본문의 <code>[사진 1]</code> 자리에 사진을 순서대로 넣고 그 표시는 지워요. 해시태그는 맨 끝.</div></div>
-        <div class="pl"><span class="pi naver_cafe" style="--pc:var(--c-naver_cafe)">C</span><div><b>네이버 카페</b> — 첫 줄이 제목. 게시판을 고르고 붙여 넣어요.</div></div>
+        <div class="pl"><span class="pi naver_blog" style="--pc:var(--c-naver_blog)">b</span><div><b>네이버 블로그</b> — <b>📋 제목</b> → 제목 칸에, <b>📋 본문 복사(서식)</b> → 본문에 붙여 넣으면 소제목·문단이 살아 있어요. 보라색 <code>[사진 1]</code> 자리에 사진을 순서대로 넣고 그 표시는 지워요.</div></div>
+        <div class="pl"><span class="pi naver_cafe" style="--pc:var(--c-naver_cafe)">C</span><div><b>네이버 카페</b> — 블로그와 같아요. 게시판을 고르고 제목·본문을 따로 붙여 넣어요.</div></div>
         <div class="pl"><span class="pi instagram">◎</span><div><b>인스타그램</b> — 사진을 먼저 고르고, 문구 칸에 붙여 넣어요. 폰으로 올린다면 복사한 글을 카톡 나에게 보내기 등으로 옮기면 편해요.</div></div>
         <div class="pl"><span class="pi tiktok" style="--pc:var(--c-tiktok)">♪</span><div><b>틱톡</b> — <code>[캡션]</code> 은 영상 설명에, <code>[자막 대본]</code> 은 편집할 때 사진 위에 한 줄씩 얹어요. <code>(사진 2)</code> 는 어느 사진 위에 얹을지예요.</div></div>
       </div>
@@ -383,12 +389,30 @@ function renderPhotos() {
   $("#dropEmpty").style.display = S.photos.length ? "none" : "";
   S.photos.forEach((f, i) => {
     const t = document.createElement("div");
-    t.className = "thumb";
+    t.className = "thumb"; t.draggable = true;
     t.innerHTML = `<img src="/api/photo?name=${encodeURIComponent(S.name)}&file=${encodeURIComponent(f)}"><b>${i + 1}</b><button title="빼기">✕</button>`;
     t.querySelector("button").onclick = () => api("/api/photo/delete", { name: S.name, file: f })
       .then(() => { S.photos = S.photos.filter(x => x !== f); renderPhotos(); }).catch(fail);
+    // 사진끼리 끌어서 순서 바꾸기 — 놓은 사진 앞으로 들어간다(맨 뒤는 「사진 고르기」 칸에)
+    t.ondragstart = e => { S.dragging = f; t.classList.add("dragging"); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", f); };
+    t.ondragend = () => { S.dragging = null; drop.querySelectorAll(".thumb").forEach(x => x.classList.remove("dragging", "target")); };
+    t.ondragover = e => { if (!S.dragging) return; e.preventDefault(); e.stopPropagation(); t.classList.toggle("target", S.dragging !== f); };
+    t.ondragleave = () => t.classList.remove("target");
+    t.ondrop = e => { if (!S.dragging) return; e.preventDefault(); e.stopPropagation(); movePhoto(S.dragging, f); };
     drop.insertBefore(t, $("#pick"));
   });
+}
+
+function movePhoto(from, before) {
+  if (from === before) return;
+  const list = S.photos.filter(x => x !== from);
+  const at = before ? list.indexOf(before) : list.length;
+  list.splice(at < 0 ? list.length : at, 0, from);
+  S.photos = list; renderPhotos();
+  api("/api/photo/order", { name: S.name, files: list }).then(d => {
+    S.photos = d.photos; renderPhotos();
+    if (Object.keys(S.texts).some(p => S.texts[p])) toast("순서를 바꿨어요 — 이미 만든 글의 [사진 n] 순서와 다를 수 있어요.");
+  }).catch(fail);
 }
 
 async function ensurePost() {
@@ -416,16 +440,23 @@ async function addFiles(files) {
 $("#pick").onclick = () => $("#file").click();
 $("#file").onchange = e => { addFiles(e.target.files); e.target.value = ""; };
 const drop = $("#drop");
-drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); };
+drop.ondragover = e => { e.preventDefault(); if (!S.dragging) drop.classList.add("over"); };
 drop.ondragleave = () => drop.classList.remove("over");
-drop.ondrop = e => { e.preventDefault(); drop.classList.remove("over"); addFiles(e.dataTransfer.files); };
+drop.ondrop = e => {
+  e.preventDefault(); drop.classList.remove("over");
+  if (S.dragging) return movePhoto(S.dragging, null);       // 빈 곳에 놓으면 맨 뒤로
+  addFiles(e.dataTransfer.files);
+};
 document.addEventListener("paste", e => {
   if (!$("#write").classList.contains("on")) return;
   const fs = [...(e.clipboardData?.files || [])];
   if (fs.length) { e.preventDefault(); addFiles(fs); }
 });
 
-function showBlank() { $("#blank").style.display = $("#cards").children.length ? "none" : ""; }
+function showBlank() {
+  $("#blank").style.display = $("#cards").children.length ? "none" : "";
+  $("#goNew").hidden = !Object.values(S.texts).some(Boolean);
+}
 
 $("#newPost").onclick = () => {
   if (Object.values(S.busy).some(Boolean)) return toast("글을 만드는 중이에요. 끝난 뒤에 새 글을 여세요.");
@@ -434,24 +465,31 @@ $("#newPost").onclick = () => {
   renderPhotos(); $("#cards").innerHTML = ""; showBlank();
 };
 
-$("#go").onclick = async () => {
-  const pids = [...document.querySelectorAll("#plats input:checked")].map(x => x.value);
-  if (!pids.length) return toast("어디에 올릴 글인지 하나 이상 골라 주세요.");
+$("#go").onclick = () => generate(false);
+$("#goNew").onclick = () => generate(true);
+
+async function generate(onlyNew) {
+  const checked = [...document.querySelectorAll("#plats input:checked")].map(x => x.value);
+  if (!checked.length) return toast("어디에 올릴 글인지 하나 이상 골라 주세요.");
   if (!$("#memo").value.trim() && !S.photos.length) return toast("메모나 사진을 넣어 주세요.");
-  $("#go").disabled = true;
+  const pids = onlyNew ? checked.filter(p => !S.texts[p]) : checked;
+  if (!pids.length) return toast("체크한 곳은 이미 다 만들었어요. 다른 플랫폼을 더 체크해 주세요.");
+  const redo = pids.filter(p => S.texts[p]);
+  if (redo.length && !confirm("이미 만든 " + redo.map(p => plat(p).name).join("·") + " 글을 새로 써요. 고친 내용은 사라져요.\n(다른 곳만 더 만들려면 「새로 고른 곳만 만들기」)")) return;
+  $("#go").disabled = $("#goNew").disabled = true;
   try {
     await ensurePost();
-    api("/api/config", { default_platforms: pids }).catch(() => {});
+    api("/api/config", { default_platforms: checked }).catch(() => {});
     const { job } = await api("/api/gen", { name: S.name, platforms: pids });
     pids.forEach(p => { S.busy[p] = true; S.texts[p] = S.texts[p] || ""; card(p, "running"); });
     $("#goHint").innerHTML = '<span class="spin"></span> 쓰는 중… 사진이 많으면 1분쯤 걸려요';
     poll(job, S.name);
-  } catch (e) { fail(e); $("#go").disabled = false; }
-};
+  } catch (e) { fail(e); $("#go").disabled = $("#goNew").disabled = false; }
+}
 
 async function poll(job, name) {
   let d;
-  try { d = await api("/api/job?id=" + job); } catch (e) { fail(e); $("#go").disabled = false; return; }
+  try { d = await api("/api/job?id=" + job); } catch (e) { fail(e); $("#go").disabled = $("#goNew").disabled = false; return; }
   if (name !== S.name) return;
   let running = 0;
   for (const [p, v] of Object.entries(d)) {
@@ -462,7 +500,7 @@ async function poll(job, name) {
     card(p, v.status, v.error);
   }
   if (running) return setTimeout(() => poll(job, name), 2000);
-  $("#go").disabled = false; $("#goHint").textContent = "";
+  $("#go").disabled = $("#goNew").disabled = false; $("#goHint").textContent = ""; showBlank();
 }
 
 function plat(p) { return S.platforms.find(x => x.id === p) || { id: p, name: p }; }
@@ -477,14 +515,21 @@ function card(p, status, error) {
       <textarea spellcheck="false"></textarea>
       <div class="chips">${QUICK.map(([l, t]) => `<button data-q="${esc(t)}">${esc(l)}</button>`).join("")}</div>
       <div class="refine"><input type="text" class="ins" placeholder="말로 다듬기 — 예) 가격 얘기를 앞으로, 반말로"><button class="btn rf">다듬기</button></div>
-      <div class="actions"><button class="btn main cp">📋 복사</button><button class="btn wr">✏️ 글쓰기 창 열기</button><button class="btn fd">🖼 사진 폴더</button></div>`;
+      <div class="actions">${plat(p).title
+        ? '<button class="btn ct" title="첫 줄(제목)만 복사 — 제목 칸에 붙여 넣어요">📋 제목</button><button class="btn main cb" title="제목 뺀 본문을 소제목·문단 서식째로 복사">📋 본문 복사(서식)</button>'
+        : '<button class="btn main cp">📋 복사</button>'}<button class="btn wr">✏️ 글쓰기 창 열기</button><button class="btn fd">🖼 사진 폴더</button></div>`;
     const ta = c.querySelector("textarea");
     ta.oninput = () => { S.texts[p] = ta.value; count(c, ta.value); clearTimeout(ta.h); ta.h = setTimeout(() =>
       api("/api/text", { name: S.name, platform: p, text: ta.value }).catch(fail), 800); };
     c.querySelectorAll("[data-q]").forEach(b => b.onclick = () => refine(p, b.dataset.q));
     c.querySelector(".rf").onclick = () => refine(p, c.querySelector(".ins").value);
     c.querySelector(".ins").onkeydown = e => { if (e.key === "Enter" && !e.isComposing) refine(p, e.target.value); };
-    c.querySelector(".cp").onclick = () => navigator.clipboard.writeText(ta.value).then(() => toast("복사했어요 — 글쓰기 창에 붙여 넣으세요."), fail);
+    if (plat(p).title) {
+      c.querySelector(".ct").onclick = () => navigator.clipboard.writeText(splitTitle(ta.value).title).then(() => toast("제목을 복사했어요 — 제목 칸에 붙여 넣으세요."), fail);
+      c.querySelector(".cb").onclick = () => copyRich(splitTitle(ta.value).body).then(() => toast("본문을 서식째 복사했어요 — 본문에 붙여 넣으세요."), fail);
+    } else {
+      c.querySelector(".cp").onclick = () => navigator.clipboard.writeText(ta.value).then(() => toast("복사했어요 — 글쓰기 창에 붙여 넣으세요."), fail);
+    }
     c.querySelector(".wr").onclick = () => api("/api/open", { what: "write", platform: p }).catch(fail);
     c.querySelector(".fd").onclick = () => api("/api/open", { what: "folder", name: S.name }).catch(fail);
     $("#cards").appendChild(c);
@@ -500,6 +545,40 @@ function card(p, status, error) {
     check ? "⚠️ <b>[확인: …]</b> 자리는 AI 가 모르는 정보예요. 직접 채워 주세요." : "";
   if (!busy) { ta.value = S.texts[p] || ""; count(c, ta.value); }
 }
+// 제목 있는 플랫폼(블로그·카페): 첫 줄 = 제목, 나머지 = 본문
+function splitTitle(t) {
+  const lines = (t || "").replace(/\r/g, "").split("\n");
+  const i = lines.findIndex(l => l.trim());
+  if (i < 0) return { title: "", body: "" };
+  return { title: lines[i].replace(/^#+\s*/, "").trim(), body: lines.slice(i + 1).join("\n").trim() };
+}
+// 본문 → 서식 있는 HTML(네이버 에디터에 붙여 넣으면 소제목·문단이 살아 있게). 텍스트로도 같이 넣는다
+function bodyHtml(body) {
+  const out = [];
+  for (const para of body.split(/\n\s*\n/)) {
+    const lines = para.split("\n").map(l => l.trim()).filter(Boolean);
+    if (!lines.length) continue;
+    let buf = [];
+    const flush = () => { if (buf.length) out.push(`<p style="font-size:16px;line-height:1.8">${buf.join("<br>")}</p>`); buf = []; };
+    for (const l of lines) {
+      if (/^#{1,3}\s+/.test(l)) { flush(); out.push(`<p><b style="font-size:20px">${esc(l.replace(/^#+\s+/, ""))}</b></p>`); }
+      else if (/^\[사진\s*\d+\]$/.test(l)) { flush(); out.push(`<p style="color:#9a8fc4;text-align:center">${esc(l)}</p>`); }
+      else buf.push(esc(l));
+    }
+    flush();
+    out.push("<p><br></p>");
+  }
+  return out.join("");
+}
+function plainBody(body) { return body.replace(/^#{1,3}\s+/gm, ""); }
+async function copyRich(body) {
+  try {
+    await navigator.clipboard.write([new ClipboardItem({
+      "text/html": new Blob([bodyHtml(body)], { type: "text/html" }),
+      "text/plain": new Blob([plainBody(body)], { type: "text/plain" }) })]);
+  } catch (e) { await navigator.clipboard.writeText(plainBody(body)); }
+}
+
 function count(c, t) { c.querySelector(".count").textContent = t ? t.replace(/\s/g, "").length + "자" : ""; }
 
 async function refine(p, instruction) {

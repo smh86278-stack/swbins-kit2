@@ -37,6 +37,16 @@ class PromptTest(unittest.TestCase):
         self.assertIn("사진 없음", s)
         self.assertNotIn("글쓴이 말투", s)
 
+    def test_fixed_tags(self):
+        self.assertEqual(gen.parse_tags("#을지로 맛집, #닉네임 을지로"), ["#을지로", "#맛집", "#닉네임"])
+        self.assertIn("꼭 그대로 넣는다", gen.build_prompt(BLOG, "m", "", [], [], "", ["#을지로"]))
+        self.assertNotIn("꼭 그대로", gen.build_prompt(CAFE, "m", "", [], [], "", ["#을지로"]))   # 태그 안 쓰는 곳
+        self.assertEqual(gen.ensure_tags("본문\n\n#카페 #라떼", ["#라떼", "#을지로"]), "본문\n\n#카페 #라떼 #을지로")
+        self.assertEqual(gen.ensure_tags("본문만", ["#을지로"]), "본문만\n\n#을지로")
+        tik = gen.ensure_tags("[캡션]\n한 줄 #카페\n\n[자막 대본]\n(사진 1) 첫 줄", ["#을지로"])
+        self.assertEqual(tik, "[캡션]\n한 줄 #카페 #을지로\n\n[자막 대본]\n(사진 1) 첫 줄")
+        self.assertEqual(gen.ensure_tags("본문 #을지로", ["#을지로"]), "본문 #을지로")
+
     def test_photo_limit(self):
         names = ["%02d.jpg" % i for i in range(13)]
         s = gen.build_prompt(BLOG, "m", "", names, [], "")

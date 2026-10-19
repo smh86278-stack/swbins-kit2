@@ -154,11 +154,43 @@ def voice_block(voice_texts, voice_note):
     return "\n\n".join(parts)
 
 
-def build_prompt(platform, memo, title, photos, voice_texts, voice_note):
+def parse_tags(s):
+    """'#동네 맛집, #닉네임' → ['#동네', '#맛집', '#닉네임'] (# 없으면 붙이고, 겹치면 하나만)."""
+    out = []
+    for w in re.split(r"[\s,]+", s or ""):
+        w = w.strip().lstrip("#")
+        if w and "#" + w not in out:
+            out.append("#" + w)
+    return out
+
+
+def ensure_tags(text, tags):
+    """늘 붙이는 해시태그 중 빠진 걸 해시태그 줄 끝에 붙인다(틱톡은 [자막 대본] 앞, 캡션 끝에)."""
+    missing = [t for t in tags if t.lower() not in text.lower()]
+    if not missing or not text.strip():
+        return text
+
+    def add(s):
+        lines = s.rstrip().split("\n")
+        if re.search(r"#[^\s#]+\s*$", lines[-1]):         # 마지막 줄이 태그로 끝나면 거기에 잇는다
+            lines[-1] = lines[-1].rstrip() + " " + " ".join(missing)
+        else:
+            lines += ["", " ".join(missing)]
+        return "\n".join(lines)
+
+    if "[자막 대본]" in text:
+        head, sep, tail = text.partition("[자막 대본]")
+        return add(head) + "\n\n" + sep + tail
+    return add(text)
+
+
+def build_prompt(platform, memo, title, photos, voice_texts, voice_note, fixed_tags=()):
     """플랫폼 하나에 쓸 글을 요청하는 프롬프트."""
+    tags = "%d개 안팎" % platform["hashtags"] if platform.get("hashtags") else "쓰지 않음"
+    if platform.get("hashtags") and fixed_tags:
+        tags += " — 이 태그는 꼭 그대로 넣는다(개수에 포함): " + " ".join(fixed_tags)
     head = [read_prompt("base.md"), read_prompt(platform["prompt"]),
-            "분량: %s · 해시태그: %s" % (platform.get("length", ""),
-                                       "%d개 안팎" % platform["hashtags"] if platform.get("hashtags") else "쓰지 않음")]
+            "분량: %s · 해시태그: %s" % (platform.get("length", ""), tags)]
     vb = voice_block(voice_texts, voice_note)
     if vb:
         head.append(vb)

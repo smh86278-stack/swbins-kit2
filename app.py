@@ -156,12 +156,19 @@ def list_posts():
 
 # ---------- 글 만들기 · 다듬기 ----------
 
+def fixed_tags(plat, cfg):
+    """늘 붙이는 해시태그 — 해시태그를 쓰는 플랫폼에만."""
+    return gen.parse_tags(cfg.get("fixed_tags", "")) if plat.get("hashtags") else []
+
+
 def gen_one(job, post_dir, plat, cfg):
     memo = read_text(os.path.join(post_dir, "memo.txt"))
     title = read_text(os.path.join(post_dir, "title.txt"))
-    prompt = gen.build_prompt(plat, memo, title, gen.photo_names(post_dir), gen.load_voice(VOICE), cfg["voice_note"])
+    tags = fixed_tags(plat, cfg)
+    prompt = gen.build_prompt(plat, memo, title, gen.photo_names(post_dir), gen.load_voice(VOICE), cfg["voice_note"], tags)
     r = gen.run(prompt, post_dir)
     if r["text"]:
+        r["text"] = gen.ensure_tags(r["text"], tags)
         save_result(post_dir, plat["id"], r["text"], r["session_id"], "")
     with LOCK:
         JOBS[job][plat["id"]] = {"status": "done" if r["text"] else "error", "text": r["text"], "error": r["error"]}
@@ -193,6 +200,7 @@ def refine(post_dir, plat, instruction, current):
                                             voice_texts=gen.load_voice(VOICE), voice_note=cfg["voice_note"]),
                     post_dir, timeout=180)
     if r["text"]:
+        r["text"] = gen.ensure_tags(r["text"], fixed_tags(plat, cfg))
         save_result(post_dir, plat["id"], r["text"], r["session_id"], instruction)
     log("refine", os.path.basename(post_dir), plat["id"], "ok" if r["text"] else "error: " + r["error"][:200])
     return r
@@ -405,7 +413,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 return self.send(200, {"ok": True})
             if u.path == "/api/config":
                 cfg = load_cfg()
-                for k in ("voice_note", "default_platforms", "write_urls"):
+                for k in ("voice_note", "default_platforms", "write_urls", "fixed_tags"):
                     if k in b:
                         cfg[k] = b[k]
                 os.makedirs(DATA, exist_ok=True)

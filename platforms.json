@@ -1,0 +1,10 @@
+[
+  {"id": "naver_blog", "name": "네이버 블로그", "prompt": "naver_blog.md",
+   "length": "1500~2500자", "hashtags": 5, "write_url": "https://blog.naver.com/GoBlogWrite.naver", "enabled": true},
+  {"id": "naver_cafe", "name": "네이버 카페", "prompt": "naver_cafe.md",
+   "length": "600~1200자", "hashtags": 0, "write_url": "", "enabled": true},
+  {"id": "instagram", "name": "인스타그램", "prompt": "instagram.md",
+   "length": "300~600자", "hashtags": 15, "write_url": "https://www.instagram.com/", "enabled": true},
+  {"id": "tiktok", "name": "틱톡", "prompt": "tiktok.md",
+   "length": "캡션 150자 + 자막 대본 30초", "hashtags": 5, "write_url": "https://www.tiktok.com/upload", "enabled": true}
+]

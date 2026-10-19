@@ -110,6 +110,31 @@ class PhotoTest(unittest.TestCase):
                 f.write(b"not an image")
             self.assertEqual(gen.process_photo(bad), "")
 
+    def test_gps_removed_from_small_photo(self):
+        from PIL import Image
+        with tempfile.TemporaryDirectory() as root:
+            p = os.path.join(root, "g.jpg")
+            ex = Image.Exif()
+            ex.get_ifd(0x8825)[2] = (37.0, 33.0, 0.0)              # GPSLatitude
+            Image.new("RGB", (400, 300)).save(p, exif=ex.tobytes())
+            with Image.open(p) as im:
+                self.assertIn(34853, im.getexif())
+            gen.process_photo(p)
+            with Image.open(p) as im:
+                self.assertNotIn(34853, im.getexif())
+                self.assertEqual(im.size, (400, 300))
+
+    def test_baby(self):
+        self.assertEqual(gen.baby_age("2026-05-10", "2026-10-19"), "생후 5개월 (163일)")
+        self.assertEqual(gen.baby_age("2026-05-10", "2026-05-10"), "생후 0개월 (1일)")
+        self.assertEqual(gen.baby_age("2026-05-31", "2026-06-30"), "생후 0개월 (31일)")
+        self.assertEqual(gen.baby_age("2026-05-10", "2026-01-01"), "")
+        self.assertEqual(gen.baby_age("", "2026-01-01"), "")
+        s = gen.build_prompt(BLOG, "m", "", [], [], "", kids={"names": "콩이, 팥이"})
+        self.assertIn("콩이·팥이", s)
+        self.assertIn("어린이집", s)
+        self.assertNotIn("아이 정보 보호", gen.build_prompt(BLOG, "m", "", [], [], "", kids={"names": ""}))
+
     def test_date_text_and_templates(self):
         self.assertEqual(gen.date_text("2026-10-18"), "2026년 10월 18일 (일)")
         self.assertEqual(gen.date_text("x"), "")

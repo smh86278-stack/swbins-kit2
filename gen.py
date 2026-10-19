@@ -88,7 +88,8 @@ def process_photo(path, max_side=MAX_SIDE):
                 return date
             turned = exif.get(274, 1) not in (1, None)           # Orientation
             big = max(im.size) > max_side or os.path.getsize(path) > 2 * 1024 * 1024
-            if not (turned or big):
+            gps = 34853 in exif                                  # 위치 정보 — 집 주소가 새지 않게 작은 사진도 다시 저장
+            if not (turned or big or gps):
                 return date
             out = ImageOps.exif_transpose(im)
             out.thumbnail((max_side, max_side), Image.LANCZOS)
@@ -113,6 +114,30 @@ def date_text(ymd):
     except ValueError:
         return ""
     return "%d년 %d월 %d일 (%s)" % (d.year, d.month, d.day, WEEK[d.weekday()])
+
+
+def baby_age(birthday, on):
+    """생일·기준일('YYYY-MM-DD') → '생후 5개월 (163일)'. 생후 N일은 태어난 날을 1일로 센다."""
+    try:
+        b = datetime.strptime(birthday, "%Y-%m-%d")
+        d = datetime.strptime(on, "%Y-%m-%d")
+    except (TypeError, ValueError):
+        return ""
+    if d < b:
+        return ""
+    months = (d.year - b.year) * 12 + d.month - b.month - (1 if d.day < b.day else 0)
+    return "생후 %d개월 (%d일)" % (months, (d - b).days + 1)
+
+
+def kids_block(kids):
+    """아이 정보 보호 규칙 — 설정에 애칭이 있으면."""
+    names = [n.strip() for n in re.split(r"[,·/]", (kids or {}).get("names", "")) if n.strip()]
+    if not names:
+        return ""
+    return ("## 아이 정보 보호\n"
+            "아이는 반드시 애칭 %s 로만 부른다(쌍둥이면 첫째·둘째 순서). "
+            "메모에 실명·정확한 생년월일·병원·어린이집·사는 동네처럼 아이를 특정할 수 있는 정보가 있어도 글에는 쓰지 않는다. "
+            "개월 수는 써도 된다." % "·".join(names))
 
 
 def load_templates():
@@ -269,7 +294,7 @@ def apply_campaign(text, campaign, platform):
     return ensure_tags(text, campaign_tags(campaign, platform))
 
 
-def build_prompt(platform, memo, title, photos, voice_texts, voice_note, fixed_tags=(), campaign=None):
+def build_prompt(platform, memo, title, photos, voice_texts, voice_note, fixed_tags=(), campaign=None, kids=None):
     """플랫폼 하나에 쓸 글을 요청하는 프롬프트."""
     tags = "%d개 안팎" % platform["hashtags"] if platform.get("hashtags") else "쓰지 않음"
     if platform.get("hashtags") and fixed_tags:
@@ -279,6 +304,9 @@ def build_prompt(platform, memo, title, photos, voice_texts, voice_note, fixed_t
     cb = campaign_block(campaign, platform)
     if cb:
         head.append(cb)
+    kb = kids_block(kids)
+    if kb:
+        head.append(kb)
     vb = voice_block(voice_texts, voice_note)
     if vb:
         head.append(vb)
@@ -297,7 +325,7 @@ def build_prompt(platform, memo, title, photos, voice_texts, voice_note, fixed_t
     return "\n\n".join(head)
 
 
-def build_refine_prompt(platform, instruction, current, standalone=False, voice_texts=(), voice_note="", campaign=None):
+def build_refine_prompt(platform, instruction, current, standalone=False, voice_texts=(), voice_note="", campaign=None, kids=None):
     """다듬기. standalone 이면 앞 대화(세션)가 없을 때 — 공통 규칙과 말투를 다시 붙인다."""
     parts = []
     if standalone:
@@ -308,6 +336,9 @@ def build_refine_prompt(platform, instruction, current, standalone=False, voice_
     cb = campaign_block(campaign, platform)
     if cb:
         parts.append(cb + "\n(다듬어도 이 조건은 그대로 지킨다)")
+    kb = kids_block(kids)
+    if kb:
+        parts.append(kb)
     parts.append("아래는 지금 %s 글이다(글쓴이가 직접 고쳤을 수 있으니 이 글을 기준으로 한다).\n\n<지금 글>\n%s\n</지금 글>" % (platform["name"], current.strip()))
     parts.append("요청: " + instruction.strip())
     parts.append("요청한 부분만 바꾸고 나머지 규칙은 그대로 지킨다. 고친 글 본문 전체만 출력한다.")

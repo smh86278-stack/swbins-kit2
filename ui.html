@@ -298,6 +298,10 @@ button.danger:hover:not(:disabled) { border-color: var(--bad); color: var(--bad)
     <div class="box list" id="voiceList"></div>
     <div class="box">
       <div class="step"><i>⚙</i>설정</div>
+      <label class="small">👶 아기 정보 (육아 글용 — 비워 두면 안 써요)</label>
+      <div class="row"><input type="date" id="kidBirth" title="생일 — 개월 수 계산용(글에는 안 써요)">
+        <input type="text" id="kidNames" placeholder="애칭 — 예) 콩이, 팥이 (첫째, 둘째 순)" style="flex:1"><button class="btn" id="saveKids">저장</button></div>
+      <p class="hint" style="margin:4px 0 0">글에는 애칭만 써요. 실명·생년월일·병원·어린이집 이름은 메모에 있어도 빼요. 생일은 「개월 수」 칸을 채우는 데만 써요.</p>
       <label class="small">늘 붙이는 해시태그 (블로그·인스타·틱톡 글에 항상 들어가요 — 예: #을지로 #닉네임)</label>
       <div class="row"><input type="text" id="fixedTags" placeholder="#동네이름 #내닉네임" style="flex:1"><button class="btn" id="saveTags">저장</button></div>
       <label class="small">네이버 카페 글쓰기 주소 (카페마다 달라요 — 카페 글쓰기 화면 주소를 붙여 넣으세요)</label>
@@ -405,6 +409,7 @@ button.danger:hover:not(:disabled) { border-color: var(--bad); color: var(--bad)
           <li><b>숫자·시간·작은 디테일</b> — 가격, 기다린 시간, 사장님 한마디, 옆 테이블 같은 것.</li>
           <li><b>아쉬운 점도 하나</b> — 좋은 말만 있으면 광고처럼 보여요.</li>
           <li><b>내 사진</b> — 사진에 보이는 걸 AI 가 글에 녹여요. 남의 사진은 쓰지 마세요.</li>
+          <li><b>👶 육아 글</b> — 🗣️ 내 말투 → 설정에 아기 생일·애칭을 넣으면 「개월 수」가 자동으로 채워지고, 글에는 애칭만 써요. 앱에 넣은 사진은 위치 정보(GPS)를 지워 두니, 올릴 땐 <b>🖼 사진 폴더</b>의 사진을 쓰세요. 아이 얼굴·이름표·집 안 주소가 보이는 사진은 한 번 더 확인하세요.</li>
           <li><b>[확인: …]</b> 자리는 AI 가 지어내지 않고 비워 둔 곳이에요. 꼭 직접 채워요.</li>
           <li>나온 글에서 <b>한두 문장은 내 손으로</b> 고쳐 보세요. 그게 제일 확실해요.</li>
           <li>카드 위 <b>⚠️ 노란 상자</b>는 앱이 직접 훑어본 점검이에요 — 뻔한 표현, 같은 끝맺음 반복, 자로 잰 듯한 문단 길이를 짚어 줘요. 고치면 바로 사라져요.</li>
@@ -509,6 +514,8 @@ async function loadState() {
   $("#voiceNote").value = d.config.voice_note || "";
   $("#cafeUrl").value = (d.config.write_urls || {}).naver_cafe || "";
   $("#fixedTags").value = d.config.fixed_tags || "";
+  $("#kidBirth").value = (d.config.kids || {}).birthday || "";
+  $("#kidNames").value = (d.config.kids || {}).names || "";
   $("#voiceList").innerHTML = d.voice.length ? "<h2>넣은 글 " + d.voice.length + "편</h2>" + d.voice.map(v =>
     `<div class="item"><span class="t">${esc(v.text.replace(/\s+/g, " ").slice(0, 120))}</span><button class="btn" data-del="${esc(v.name)}">빼기</button></div>`).join("")
     : '<div class="blank"><span class="e">🗣️</span>아직 넣은 글이 없어요. 없어도 쓸 수 있지만, 넣으면 훨씬 내 글처럼 나와요.</div>';
@@ -572,9 +579,18 @@ function useTemplate(t) {
 }
 
 // 사진에서 읽은 찍은 날짜를 메모에 — 빈 '날짜:' 칸이 있으면 채우고, 날짜 얘기가 없으면 한 줄 덧붙인다
-function fillDate(dates) {
+async function fillAge(on) {
+  const m = $("#memo");
+  if (!/^개월 수:[ \t]*$/m.test(m.value) || !(S.config.kids || {}).birthday) return false;
+  const { age } = await api("/api/age" + (on ? "?on=" + on : "")).catch(() => ({}));
+  if (!age) return false;
+  m.value = m.value.replace(/^개월 수:[ \t]*$/m, "개월 수: " + age);
+  return true;
+}
+async function fillDate(dates) {
   const ds = dates.filter(x => x.date).sort((a, b) => a.date.localeCompare(b.date));
   if (!ds.length) return;
+  await fillAge(ds[0].date);                             // 육아 틀이면 사진 찍은 날 기준 개월 수
   const m = $("#memo"), text = ds[0].date_text;
   if (/^날짜:[ \t]*$/m.test(m.value)) m.value = m.value.replace(/^날짜:[ \t]*$/m, "날짜: " + text);
   else if (!/날짜/.test(m.value)) m.value = (m.value.trimEnd() ? m.value.trimEnd() + "\n" : "") + "날짜: " + text;
@@ -642,6 +658,7 @@ async function generate(onlyNew) {
   if (redo.length && !confirm("이미 만든 " + redo.map(p => plat(p).name).join("·") + " 글을 새로 써요. 고친 내용은 사라져요.\n(다른 곳만 더 만들려면 「새로 고른 곳만 만들기」)")) return;
   $("#go").disabled = $("#goNew").disabled = true;
   try {
+    await fillAge();                                     // 개월 수 칸이 비어 있으면 오늘 기준
     await ensurePost();
     api("/api/config", { default_platforms: checked }).catch(() => {});
     const { job } = await api("/api/gen", { name: S.name, platforms: pids });
@@ -825,7 +842,9 @@ $("#saveCafe").onclick = () => {
   if (u && !u.startsWith("https://")) return toast("https:// 로 시작하는 주소를 넣어 주세요.");
   api("/api/config", { write_urls: Object.assign({}, S.config.write_urls, { naver_cafe: u }) }).then(() => { toast("저장했어요."); loadState(); }).catch(fail);
 };
-$("#saveTags").onclick = () => api("/api/config", { fixed_tags: $("#fixedTags").value.trim() }).then(() => toast("저장했어요 — 다음에 만드는 글부터 들어가요.")).catch(fail);
+$("#saveKids").onclick = () => api("/api/config", { kids: { birthday: $("#kidBirth").value, names: $("#kidNames").value.trim() } })
+  .then(d => { S.config = d; toast("저장했어요."); }).catch(fail);
+$("#saveTags").onclick =() => api("/api/config", { fixed_tags: $("#fixedTags").value.trim() }).then(() => toast("저장했어요 — 다음에 만드는 글부터 들어가요.")).catch(fail);
 $("#openData").onclick = () => api("/api/open", { what: "data" }).catch(fail);
 $("#mkLinks").onclick = () => api("/api/shortcuts", {}).then(() => toast("바탕 화면과 시작 메뉴에 「글 도우미」를 만들었어요.")).catch(fail);
 

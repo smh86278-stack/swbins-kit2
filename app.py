@@ -206,7 +206,7 @@ def gen_one(job, post_dir, plat, cfg):
     title = read_text(os.path.join(post_dir, "title.txt"))
     tags = fixed_tags(plat, cfg)
     camp = campaign_for(post_dir)
-    prompt = gen.build_prompt(plat, memo, title, gen.photo_names(post_dir), gen.load_voice(VOICE), cfg["voice_note"], tags, camp)
+    prompt = gen.build_prompt(plat, memo, title, gen.photo_names(post_dir), gen.load_voice(VOICE), cfg["voice_note"], tags, camp, cfg.get("kids"))
     r = gen.run(prompt, post_dir)
     if r["text"]:
         r["text"] = gen.apply_campaign(gen.ensure_tags(r["text"], tags), camp, plat)
@@ -236,10 +236,11 @@ def refine(post_dir, plat, instruction, current):
     camp = campaign_for(post_dir)
     r = {"text": "", "error": "", "session_id": ""}
     if sid:
-        r = gen.run(gen.build_refine_prompt(plat, instruction, current, campaign=camp), post_dir, resume_id=sid, timeout=180)
+        r = gen.run(gen.build_refine_prompt(plat, instruction, current, campaign=camp, kids=cfg.get("kids")), post_dir, resume_id=sid, timeout=180)
     if not r["text"]:      # 세션이 없거나 이어받기에 실패하면 규칙·말투를 다시 붙여 새로
         r = gen.run(gen.build_refine_prompt(plat, instruction, current, standalone=True,
-                                            voice_texts=gen.load_voice(VOICE), voice_note=cfg["voice_note"], campaign=camp),
+                                            voice_texts=gen.load_voice(VOICE), voice_note=cfg["voice_note"], campaign=camp,
+                                            kids=cfg.get("kids")),
                     post_dir, timeout=180)
     if r["text"]:
         r["text"] = gen.apply_campaign(gen.ensure_tags(r["text"], fixed_tags(plat, cfg)), camp, plat)
@@ -365,6 +366,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     return self.send(200 if j else 404, j if j else {"error": "작업을 찾을 수 없습니다."})
             if u.path == "/api/posts":
                 return self.send(200, list_posts())
+            if u.path == "/api/age":                        # 아기 개월 수(설정의 생일 기준)
+                bd = (load_cfg().get("kids") or {}).get("birthday", "")
+                return self.send(200, {"age": gen.baby_age(bd, q.get("on") or datetime.now().strftime("%Y-%m-%d"))})
             if u.path == "/api/items":
                 if q.get("kind") not in ITEMS:
                     raise ValueError("없는 목록입니다.")
@@ -471,7 +475,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 return self.send(200, {"ok": True})
             if u.path == "/api/config":
                 cfg = load_cfg()
-                for k in ("voice_note", "default_platforms", "write_urls", "fixed_tags"):
+                for k in ("voice_note", "default_platforms", "write_urls", "fixed_tags", "kids"):
                     if k in b:
                         cfg[k] = b[k]
                 os.makedirs(DATA, exist_ok=True)

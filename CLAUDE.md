@@ -20,6 +20,10 @@
 브랜치 `main` 하나, 원격 `origin` = github.com/smh86278-stack/swbins-kit2 (private).
 커밋 전 `python -m unittest discover tests` 가 통과해야 한다.
 
+**릴리스**(exe 배포): `python build.py` → 태그 `vX.Y.Z` push → GitHub API 로 릴리스 만들고 `dist\PostKit.exe` 를 자산으로 올린다.
+이 PC 엔 `gh` 가 없다 — 토큰은 `git credential fill`(GCM, smh86278-stack)에서 꺼내 curl 에 바로 넘기고 **화면·파일에 남기지 않는다**.
+릴리스 본문 JSON 은 명령줄로 넘기면 한글이 깨지니 파일로(`--data-binary @file`). 회사망이라 파이썬 urllib·pip 는 SSL 검사에 막히고 curl 은 된다.
+
 ## 검증 습관
 
 ```

@@ -1,33 +1,85 @@
 # swbins-kit2 — 글 도우미 (개인 부업용 글쓰기 응용프로그램)
 
-사진·메모를 넣으면 블로그·카페·인스타·틱톡용 글을 **내 말투로** 써 주고 다듬어 주는 윈도우 응용프로그램(exe 하나).
+사진·메모를 넣으면 블로그·카페·인스타·틱톡용 글을 **내 말투로** 써 주고 다듬어 주는 윈도우 응용프로그램(`PostKit.exe` 하나).
 **올리는 건 사람이 한다** — 자동 발행·자동 로그인·브라우저 조작은 이 저장소에 넣지 않는다(네이버 약관·계정 정지 위험, 2026-10-19 사용자 결정).
 
-설계·작업 순서는 `DESIGN.md` 가 정본이다. 먼저 읽는다.
+> 이 파일이 **정본**이다. 다른 PC 의 Claude Code 도 이 파일만 읽으면 이어서 할 수 있게 적는다 — 상태가 바뀌면 여기 「지금 상태」를 고친다.
+> `DESIGN.md` 는 첫 판 설계서(2026-10-19)라 그 뒤 기능은 없다. 역사 참고용.
+
+## 지금 상태 (2026-10-19, 릴리스 v0.2.0 · 커밋 691e3e1)
+
+다 된 것 — 화면 탭 순서대로:
+- **✍️ 쓰기**: 메모·사진(끌어 놓기·붙여넣기·끌어서 순서 바꾸기) → 플랫폼 고르기 → 플랫폼별 카드(병렬 `claude -p`), 말로/버튼으로 다듬기(세션 이어받기), 복사(블로그·카페는 제목 / 본문 서식 따로), 글쓰기 창 열기, 「새로 고른 곳만 만들기」, AI 티 점검(화면에서, 뻔한 표현·같은 끝맺음·고른 문단·이모지 반복·캠페인 조건), 「🗣 내 말투로 저장」.
+  메모 틀 `templates.json`(맛집·카페·제품 후기·여행·👶 쌍둥이 육아·일상) — 빈 칸은 글에 안 넣는다(prompts\base.md 규칙).
+  사진은 넣을 때 긴 변 1600·EXIF 회전·GPS 있으면 다시 저장(위치 지움), 찍은 날짜를 메모 「날짜:」 칸에, 아기 생일이 있으면 「개월 수:」 칸에.
+- **🗣️ 내 말투**: 내가 쓴 글(voice\*.txt, 최근 5편·1500자) + 말투 메모.
+- **📂 지난 글**: 다시 열기 · **👶 성장 기록**(「개월 수」 있는 글을 개월 순, 골라서 모은 메모+대표 사진으로 새 글).
+- **🎁 캠페인**: 체험단·협찬·공구 — 필수 키워드(횟수)·태그·링크·요구사항을 프롬프트에, 협찬/공구 표기 문장은 앱이 직접 넣음(`gen.apply_campaign`, 받침 따라 조사), 마감 3일 전 배지, 「완료」→ 장부.
+- **📒 장부**: 받은 돈·물품 가액·글 주소, 연도 합계·월별 표, CSV(엑셀용 BOM).
+- **⚙️ 설정**: 💾 데이터 폴더 옮기기(OneDrive·구글 드라이브·폴더 고르기, 복사·원래 자리 남김, 이미 데이터 있으면 그대로 씀) · 백업 zip 받기/되살리기 · 하루 한 번 자동 백업 · 📱 폰에서 쓰기 · 👶 아기 생일·애칭(글엔 애칭만) · 늘 붙이는 해시태그 · 카페 글쓰기 주소 · 바로가기 다시 만들기.
+- **📱 폰에서 쓰기**: 켤 때만 LAN 주소:8653(PhoneHandler), QR(`qr.py` 자체 구현)·6자리 PIN → HttpOnly 세션, 5번 틀리면 5분 잠금, PC 를 건드리는 길 막음, 좁은 화면은 탭이 아래로.
+- **❓ 도움말** 탭, 첫 실행 때 도움말 먼저, exe 처음 실행 때 바탕 화면·시작 메뉴 바로가기.
+
+**아직 실제로 확인 못 한 것**(사용자가 써 보고 알려 주기로 함 — 다음 세션은 사용 후기부터):
+1. 네이버 블로그 에디터에 「본문 복사(서식)」 붙여 넣었을 때 모양(소제목 크기·줄 간격)
+2. 진짜 아이폰으로 폰에서 쓰기(집 와이파이) — 시험 브라우저로만 확인
+3. 말투가 얼마나 비슷한지, AI 티 점검 기준이 적당한지
+
+**사용자 결정·취향**(다시 묻지 말 것):
+- 쓰는 사람은 일단 나만 → AI 는 `claude -p` 로그인(Claude Code). API 키 방식은 판매판 때.
+- 부업 방향: **체험단·협찬·공구** + **쌍둥이 아기 육아 일상** 글. 카카오 쪽은 "잘 모르겠으니 패스".
+- 「AI 글 티」는 속이는 기능이 아니라 내 말투·사실 재료·뻔한 표현 걷어내기로 푼다. 광고·AI 표시를 숨기는 기능은 안 만든다.
+- 기능 추천은 멈춘 상태 — **써 본 뒤 나온 요청만** 넣는다. 넣기 전에 "굳이 필요?" 부터 따진다. 속도 중시.
+
+## 파일
+
+```
+app.py            서버·창·라우팅·폰 서버(PhoneHandler)·데이터 폴더/백업 길
+gen.py            프롬프트 조립·claude -p 호출·결과 파싱·사진 손질·태그/협찬 표기·아기 개월 수 (테스트 대상)
+store.py          데이터 폴더 위치(location.json)·복사·백업 zip/되살리기·자동 백업·성장 기록 (테스트 대상)
+qr.py             QR(바이트·M·버전 1~10) — 외부 라이브러리 없이
+ui.html           화면 전부(바닐라 JS, 외부 CDN 없음). 색은 swbins2 허브 theme.css 값을 복사해 씀
+prompts\*.md      base(공통 규칙·뻔한 표현 목록) + 플랫폼별. platforms.json · templates.json
+make_icon.py      app.ico · icon.png(180) 만들기     build.py  PyInstaller 한 파일 exe
+tests\            test_gen · test_store · test_qr (unittest)
+```
+
+데이터(앱이 쓰는 것, 저장소 밖): 기본 `%APPDATA%\PostKit\`(config.json · voice\ · posts\<날짜-메모>\{memo.txt, photos\, order.json, <플랫폼>.md, .history.jsonl, campaign.txt} · campaigns.json · ledger.json). 옮겼으면 `%APPDATA%\PostKit\location.json` 이 새 자리를 가리킨다. 로그·자동 백업은 `%LOCALAPPDATA%\PostKit\`(app.log · backups\).
+
+## 다른 PC 에서 이어 하기
+
+```
+git clone https://github.com/smh86278-stack/swbins-kit2.git C:\swbins-kit2      (private — smh86278-stack 로그인)
+python -m pip install pillow pyinstaller                                        (파이썬 3.10+)
+cd C:\swbins-kit2 && claude                                                     (이 파일을 읽고 이어 감)
+```
+앱 데이터(말투·글·장부)는 git 에 없다 — 데이터 폴더를 OneDrive 로 옮겨 두었으면 새 PC 앱의 ⚙️ 설정에서 같은 폴더를 고르면 된다.
 
 ## 규칙
 
-- **회사 값 금지** — `C:\swbins2`(사방넷·daou)·`C:\swbins-kit` 과 별개 저장소. 회사 이름·주소·계정이 코드·문서에 들어가면 안 된다. 개인 정보(내 블로그 주소 등)도 설정 파일(`%APPDATA%\PostKit\config.json`)에만 두고 저장소엔 넣지 않는다.
-- **발행 자동화 금지** — 네이버 글쓰기 창을 자동으로 채우거나 발행 버튼을 누르는 코드, 로그인 자동화, 여러 계정 돌리기는 만들지 않는다. "글쓰기 창 열어 주기 + 클립보드 복사" 까지만.
-- **AI 연결은 `claude -p` 로그인 방식만** — API 키 없음(사용자 결정). 판매판으로 바꿀 때 키 방식을 덧붙인다.
-- **화면은 `127.0.0.1` 에만** 연다. 상태를 바꾸는 POST 는 띄울 때마다 새로 만드는 토큰을 화면에 심어 확인한다(`swbins2\tools\dispatch-chat\chat.py` 방식).
-- claude 에 허용하는 도구는 **Read 만**(사진 보기용). Bash·Write·브라우저 도구는 `--disallowedTools`.
-- 답변·주석·화면 문구는 한국어. "매크로" 라는 말은 쓰지 않는다(폴더·exe 이름은 상관없음).
-- 빌드 결과(`dist\`·`build\`)·`*.spec` 은 git 에 넣지 않는다.
+- **회사 값 금지** — `C:\swbins2`(회사 일)·`C:\swbins-kit` 과 별개 저장소. 회사 이름·주소·계정이 코드·문서에 들어가면 안 된다. 개인 정보(블로그 주소·아이 실명 등)도 앱 데이터에만, 저장소엔 넣지 않는다.
+- **발행 자동화 금지** — 네이버 글쓰기 창을 자동으로 채우거나 발행 버튼을 누르는 코드, 로그인 자동화, 여러 계정 돌리기는 만들지 않는다. "글쓰기 창 열어 주기 + 클립보드 복사" 까지만. 인스타·틱톡 공식 API 업로드는 DESIGN.md §9 에 설계만.
+- **AI 연결은 `claude -p` 만** — `--allowedTools Read`(사진 보기용), Bash·Write·웹 도구는 `--disallowedTools`. 프롬프트는 stdin 으로.
+- **화면은 `127.0.0.1` 에만** — POST 는 띄울 때마다 새로 만드는 토큰(X-Token). 예외는 「폰에서 쓰기」를 켰을 때의 PhoneHandler 하나(PIN·세션·PC 전용 길 차단 `PHONE_ONLY_PC`). 새 API 를 만들면 폰에서 막아야 하는지 꼭 따진다.
+- 답변·주석·화면 문구는 한국어(사용자에게 영어로 새지 말 것). "매크로" 대신 "자동화". 화면 말투는 "~해요".
+- 빌드 결과(`dist\`·`build\`)·`*.spec` 은 git 에 넣지 않는다. `app.ico`·`icon.png` 는 넣는다.
 
-## git
+## 시험 · 함정
 
-브랜치 `main` 하나, 원격 `origin` = github.com/smh86278-stack/swbins-kit2 (private).
-커밋 전 `python -m unittest discover tests` 가 통과해야 한다.
+- **시험 데이터는 `POSTKIT_DATA=<폴더>` 로 분리**(위치 기록·백업도 그 폴더로 간다). 그냥 띄우면 실제 데이터·실제 자동 백업을 건드린다 — 한 번 섞여서 지운 적 있음.
+  `POSTKIT_DATA=... python -X utf8 -c "import app; app.PORT=8651; app.main()" --no-window` 로 띄우고 Playwright 로 연다(사용자 창을 잡지 않게).
+- 앱은 창이 닫혀 `/api/ping` 신호가 45초 끊기면 스스로 끝난다 — 살았는지 볼 땐 `/api/state` 를 부른다(`/api/ping` 은 신호를 다시 켠다).
+- 서버 코드(app.py)를 고치면 다시 띄워야 하고, ui.html 만 고치면 새로고침이면 된다.
+- 띄워 둔 `PostKit.exe` 가 있으면 빌드가 덮어쓰지 못한다 — `Get-Process PostKit | Stop-Process` 후 빌드.
+- ui.html: `[hidden]` 은 맨 위 `display:none !important` 규칙으로 이긴다(없으면 display 규칙에 덮인다).
+- 회사망 PC 에선 **pip·파이썬 urllib 이 SSL 검사에 막힌다**(self signed) — 인증서 검사를 끄지 말고 의존성 없이 짠다(qr.py 가 그래서 자체 구현). curl·git 은 된다.
+- 실제 claude 호출 시험은 한 번에 30초쯤, 사용량을 먹으니 꼭 필요한 것만.
 
-**릴리스**(exe 배포): `python build.py` → 태그 `vX.Y.Z` push → GitHub API 로 릴리스 만들고 `dist\PostKit.exe` 를 자산으로 올린다.
-이 PC 엔 `gh` 가 없다 — 토큰은 `git credential fill`(GCM, smh86278-stack)에서 꺼내 curl 에 바로 넘기고 **화면·파일에 남기지 않는다**.
-릴리스 본문 JSON 은 명령줄로 넘기면 한글이 깨지니 파일로(`--data-binary @file`). 회사망이라 파이썬 urllib·pip 는 SSL 검사에 막히고 curl 은 된다.
+## git · 릴리스
 
-## 검증 습관
+브랜치 `main` 하나, 원격 `origin` = github.com/smh86278-stack/swbins-kit2 (private). 원격 주소에 계정 이름을 넣어 둔다(`https://smh86278-stack@github.com/...`) — 이 PC 엔 정지된 옛 계정 자격 증명도 남아 있어서.
+커밋 전 `python -m unittest discover tests` 가 통과해야 한다. 커밋 메시지는 한국어.
 
-```
-python app.py            창이 뜨고(Edge --app), 사진 폴더 하나로 네이버 블로그 글이 나오는지
-python build.py          dist\PostKit.exe 가 만들어지고 더블클릭으로 같은 동작
-python -m unittest discover tests
-```
+**릴리스**(exe 배포, 사용자가 "릴리스 올려 줘" 하면): 커밋 → `python build.py` → 태그 `vX.Y.Z` push → GitHub API 로 릴리스 + `dist\PostKit.exe` 자산.
+`gh` 가 없으면 토큰은 `git credential fill`(GCM)에서 꺼내 curl 에 바로 넘기고 **화면·파일에 남기지 않는다**. 릴리스 본문 JSON 은 명령줄로 넘기면 한글이 깨지니 파일로(`--data-binary @file`).
+지금까지: v0.1.0(48af3fc) · v0.2.0(691e3e1).

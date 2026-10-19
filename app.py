@@ -6,7 +6,8 @@
 - 화면은 127.0.0.1 에만 연다. 상태를 바꾸는 POST 는 띄울 때마다 새로 만드는 토큰(X-Token)이 있어야 한다.
   「폰에서 쓰기」를 켰을 때만 집 네트워크 주소에 따로 연다(PIN → 세션 쿠키, PC 를 건드리는 길은 막음 — PhoneHandler).
 - 창은 Edge --app(따로 둔 프로필). 창이 닫혀 신호(/api/ping)가 끊기면 서버도 스스로 끝난다.
-- 데이터는 %APPDATA%\\PostKit (config.json · voice\\*.txt · posts\\<글>\\).
+- 데이터는 %APPDATA%\\PostKit (config.json · voice\\*.txt · posts\\<글>\\ · campaigns.json · ledger.json).
+  설정에서 OneDrive 같은 곳으로 옮길 수 있고(store.py), 하루 한 번 사진 빼고 %LOCALAPPDATA%\\PostKit\\backups 에 자동 백업.
 - 올리기는 사람이 한다 — 여기선 복사와 글쓰기 창 열기까지만.
 """
 import http.server
@@ -14,6 +15,7 @@ import json
 import os
 import re
 import secrets
+import shutil
 import socket
 import socketserver
 import subprocess
@@ -23,21 +25,34 @@ import time
 import urllib.parse
 import urllib.request
 import webbrowser
+import zipfile
 from datetime import datetime
 
 import gen
+import store
 
 APP = "PostKit"
 PORT = 8650
 IS_WIN = sys.platform == "win32"
 HERE = os.path.dirname(os.path.abspath(__file__))
-DATA = os.environ.get("POSTKIT_DATA") or os.path.join(os.environ.get("APPDATA") or HERE, APP)     # 시험할 땐 POSTKIT_DATA 로 따로
+# 기본 데이터 자리 — 데이터 폴더를 옮기면 여기 location.json 에 새 자리를 적는다. 시험할 땐 POSTKIT_DATA 로 따로
+HOME = os.environ.get("POSTKIT_DATA") or os.path.join(os.environ.get("APPDATA") or HERE, APP)
 LOCALDATA = os.path.join(os.environ.get("LOCALAPPDATA") or HERE, APP)
-POSTS = os.path.join(DATA, "posts")
-VOICE = os.path.join(DATA, "voice")
-CFG = os.path.join(DATA, "config.json")
-ITEMS = {"campaigns": os.path.join(DATA, "campaigns.json"),     # 체험단·협찬·공구
-         "ledger": os.path.join(DATA, "ledger.json")}           # 장부
+BACKUPS = os.path.join(HOME, "_backups") if os.environ.get("POSTKIT_DATA") else os.path.join(LOCALDATA, "backups")
+
+
+def set_data(path):
+    """데이터 폴더를 정한다(옮길 때도 이걸로)."""
+    global DATA, POSTS, VOICE, CFG, ITEMS
+    DATA = path
+    POSTS = os.path.join(DATA, "posts")
+    VOICE = os.path.join(DATA, "voice")
+    CFG = os.path.join(DATA, "config.json")
+    ITEMS = {"campaigns": os.path.join(DATA, "campaigns.json"),     # 체험단·협찬·공구
+             "ledger": os.path.join(DATA, "ledger.json")}           # 장부
+
+
+set_data(store.load_location(HOME) or HOME)
 TOKEN = secrets.token_urlsafe(24)
 FROZEN = bool(getattr(sys, "frozen", False))      # PostKit.exe 로 돌고 있나
 NAME_RE = re.compile(r"^[^\\/:*?\"<>|\x00-\x1f]{1,120}$")
@@ -295,6 +310,103 @@ def first_run_shortcuts():
         write_text(CFG, json.dumps(cfg, ensure_ascii=False, indent=2))
 
 
+# ---------- 데이터 폴더 · 백업 · 성장 기록 ----------
+
+def busy():
+    with LOCK:
+        return any(v["status"] == "running" for j in JOBS.values() for v in j.values())
+
+
+def data_status():
+    return {"dir": DATA, "default": HOME, "is_default": os.path.normcase(DATA) == os.path.normcase(HOME),
+            "clouds": store.cloud_folders(), "company_onedrive": store.company_onedrive(), "backups": BACKUPS}
+
+
+def daily_backup():
+    try:
+        made = store.auto_backup(DATA, BACKUPS)
+        if made:
+            log("자동 백업", made)
+    except OSError as e:
+        log("자동 백업 실패", e)
+
+
+def pick_folder():
+    """윈도우 폴더 고르기 창(PC 화면에 뜬다). 고른 경로, 취소면 ''."""
+    if not IS_WIN:
+        return ""
+    ps = ("Add-Type -AssemblyName System.Windows.Forms; [Console]::OutputEncoding = [Text.Encoding]::UTF8; "
+          "$o = New-Object System.Windows.Forms.Form -Property @{TopMost = $true}; "
+          "$d = New-Object System.Windows.Forms.FolderBrowserDialog; $d.Description = '글 도우미 데이터를 둘 폴더를 고르세요 (OneDrive·구글 드라이브 폴더 추천)'; "
+          "$d.ShowNewFolderButton = $true; if ($d.ShowDialog($o) -eq 'OK') { $d.SelectedPath }")
+    try:
+        p = subprocess.run(["powershell", "-NoProfile", "-STA", "-ExecutionPolicy", "Bypass", "-Command", ps],
+                           capture_output=True, timeout=600, creationflags=gen.CREATE_NO_WINDOW)
+        return p.stdout.decode("utf-8", "replace").strip()
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+
+def move_data(picked):
+    """데이터 폴더를 picked 로. 거기 데이터가 이미 있으면 그걸 쓰고(다른 PC 와 함께), 없으면 지금 데이터를 복사한다.
+    원래 자리의 데이터는 지우지 않는다."""
+    if busy():
+        raise ValueError("글을 만드는 중이에요. 끝난 뒤에 옮겨 주세요.")
+    if not picked or not os.path.isdir(picked):
+        raise ValueError("폴더를 찾을 수 없어요.")
+    dst = store.target_dir(picked)
+    if os.path.normcase(os.path.abspath(dst)) == os.path.normcase(os.path.abspath(DATA)):
+        raise ValueError("지금 쓰고 있는 폴더예요.")
+    if store.has_data(dst):
+        used, n = True, 0
+    else:
+        used, n = False, store.copy_data(DATA, dst)
+    old = DATA
+    store.save_location(HOME, dst)
+    set_data(dst)
+    log("데이터 폴더 옮김", old, "→", dst, "기존 데이터 사용" if used else "%d개 복사" % n)
+    return {"dir": dst, "used_existing": used, "copied": n, "old": old}
+
+
+def growth():
+    cfg = load_cfg()
+    names = [n.strip() for n in re.split(r"[,·/]", (cfg.get("kids") or {}).get("names", "")) if n.strip()]
+    rows = []
+    if os.path.isdir(POSTS):
+        for n in os.listdir(POSTS):
+            d = os.path.join(POSTS, n)
+            if os.path.isdir(d):
+                e = store.growth_entry(n, read_text(os.path.join(d, "memo.txt")), gen.photo_names(d))
+                if e:
+                    rows.append(e)
+    rows.sort(key=lambda e: (e["month"], e["name"]))
+    return {"names": names[:2], "entries": rows}
+
+
+def compose_growth(picked):
+    """고른 성장 기록으로 새 글 — 모은 메모 + 기록마다 대표 사진 한 장(개월 순, 10장까지)."""
+    g = growth()
+    entries = [e for e in g["entries"] if e["name"] in set(picked or [])]
+    if not entries:
+        raise ValueError("모을 기록을 골라 주세요.")
+    memo = store.compose_memo(entries, g["names"] or ["첫째", "둘째"])
+    d = gen.new_post_dir(POSTS, "성장 기록 모음")
+    write_text(os.path.join(d, "memo.txt"), memo)
+    write_text(os.path.join(d, "title.txt"), "")
+    write_text(os.path.join(d, "campaign.txt"), "")
+    order = []
+    for i, e in enumerate([e for e in entries if e["photo"]][:gen.MAX_PHOTOS], 1):
+        src = os.path.join(POSTS, e["name"], "photos", e["photo"])
+        name = "%02d-%s" % (i, e["photo"])
+        try:
+            shutil.copy2(src, os.path.join(d, "photos", name))
+            order.append(name)
+        except OSError:
+            pass
+    gen.save_photo_order(d, order)
+    return os.path.basename(d)
+
+
 def open_window(url):
     """Edge 앱 창(따로 둔 프로필). 없으면 기본 브라우저."""
     if IS_WIN:
@@ -385,6 +497,34 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     return self.send(200 if j else 404, j if j else {"error": "작업을 찾을 수 없습니다."})
             if u.path == "/api/posts":
                 return self.send(200, list_posts())
+            if u.path == "/api/growth":
+                return self.send(200, growth())
+            if u.path == "/api/data":
+                return self.send(200, data_status())
+            if u.path == "/api/backup.zip":                 # 백업 파일 받기 — 브라우저가 내려받기로 저장
+                os.makedirs(BACKUPS, exist_ok=True)
+                photos = q.get("photos") == "1"
+                name = "PostKit-backup-%s%s.zip" % (datetime.now().strftime("%Y%m%d-%H%M"), "" if photos else "-nophoto")
+                path = os.path.join(BACKUPS, "download.zip")
+                store.make_zip(DATA, path, photos=photos)
+                size = os.path.getsize(path)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/zip")
+                self.send_header("Content-Length", str(size))
+                self.send_header("Content-Disposition", 'attachment; filename="%s"' % name)
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                with open(path, "rb") as f:
+                    while True:
+                        chunk = f.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        self.wfile.write(chunk)
+                os.remove(path)
+                return
+            if u.path == "/api/backups":                    # 자동 백업 목록
+                fs = sorted((f for f in os.listdir(BACKUPS) if f.endswith(".zip")), reverse=True) if os.path.isdir(BACKUPS) else []
+                return self.send(200, [{"name": f, "size": os.path.getsize(os.path.join(BACKUPS, f))} for f in fs])
             if u.path == "/api/age":                        # 아기 개월 수(설정의 생일 기준)
                 bd = (load_cfg().get("kids") or {}).get("birthday", "")
                 return self.send(200, {"age": gen.baby_age(bd, q.get("on") or datetime.now().strftime("%Y-%m-%d"))})
@@ -427,7 +567,40 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     f.write(data)
                 date = gen.process_photo(p)             # 크면 줄이고, 찍은 날짜를 읽는다
                 return self.send(200, {"file": os.path.basename(p), "date": date, "date_text": gen.date_text(date)})
+            if u.path == "/api/restore":                # 백업에서 되살리기 — 몸통이 zip 그대로. 먼저 지금 상태를 백업해 둔다
+                if busy():
+                    raise ValueError("글을 만드는 중이에요. 끝난 뒤에 해 주세요.")
+                os.makedirs(BACKUPS, exist_ok=True)
+                up = os.path.join(BACKUPS, "upload.zip")
+                left = int(self.headers.get("Content-Length") or 0)
+                if left > 4 * 1024 ** 3:
+                    raise ValueError("파일이 너무 커요.")
+                with open(up, "wb") as f:
+                    while left > 0:
+                        chunk = self.rfile.read(min(left, 1024 * 1024))
+                        if not chunk:
+                            break
+                        f.write(chunk)
+                        left -= len(chunk)
+                try:
+                    with zipfile.ZipFile(up) as z:
+                        store.check_zip(z)                      # 먼저 검사하고
+                    before = os.path.join(BACKUPS, "before-restore-%s.zip" % datetime.now().strftime("%Y%m%d-%H%M%S"))
+                    store.make_zip(DATA, before, photos=True)
+                    n = store.restore_zip(up, DATA)
+                except zipfile.BadZipFile:
+                    raise ValueError("zip 파일이 아니에요.")
+                finally:
+                    os.remove(up)
+                log("백업에서 되살림", n, "개, 이전 상태:", before)
+                return self.send(200, {"restored": n, "before": before})
             b = self.body_json()
+            if u.path == "/api/data/pick":
+                return self.send(200, {"path": pick_folder()})
+            if u.path == "/api/data/move":
+                return self.send(200, move_data(b.get("path", "")))
+            if u.path == "/api/growth/compose":
+                return self.send(200, {"name": compose_growth(b.get("names"))})
             if u.path == "/api/post/new":
                 os.makedirs(POSTS, exist_ok=True)
                 d = gen.new_post_dir(POSTS, b.get("memo", ""))
@@ -543,7 +716,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
 # 폰은 PIN 으로 받은 세션(쿠키)으로만 들어오고, PC 를 건드리는 길(폴더 열기·바로가기·폰 설정)은 막는다.
 
 PHONE = {"srv": None, "ip": "", "port": 8653, "pin": "", "sessions": set(), "fails": 0, "lock_until": 0.0}
-PHONE_ONLY_PC = {"/api/phone", "/api/phone/qr.svg", "/api/shortcuts"}
+PHONE_ONLY_PC = {"/api/phone", "/api/phone/qr.svg", "/api/shortcuts", "/api/data", "/api/data/pick", "/api/data/move",
+                 "/api/backup.zip", "/api/backups", "/api/restore"}
 LOGIN_HTML = """<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>글 도우미</title><link rel="icon" href="/icon.png"><link rel="apple-touch-icon" href="/icon.png"><style>
 body{margin:0;min-height:100vh;display:grid;place-items:center;font:16px/1.5 -apple-system,"Apple SD Gothic Neo",sans-serif;color:#2f2b45;
@@ -711,6 +885,7 @@ def main():
     log("시작", url)
     threading.Thread(target=watchdog, args=(srv,), daemon=True).start()
     threading.Thread(target=first_run_shortcuts, daemon=True).start()
+    threading.Thread(target=daily_backup, daemon=True).start()
     if "--no-window" not in sys.argv:
         open_window(url)
     else:

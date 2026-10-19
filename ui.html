@@ -23,6 +23,7 @@
   --c-naver_blog: #03c75a; --c-naver_cafe: #2db400; --c-instagram: #e1306c; --c-tiktok: light-dark(#111, #eee);
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { margin: 0; height: 100%; }
 body {
   color: var(--text); font: 14px/1.55 "Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; display: flex;
@@ -238,6 +239,31 @@ button.danger:hover:not(:disabled) { border-color: var(--bad); color: var(--bad)
 .dots .pi { width: 20px; height: 20px; border-radius: 6px; font-size: 10px; }
 .tag { font-size: 11px; background: var(--soft); border-radius: 10px; padding: 2px 8px; color: var(--muted); flex: none; }
 
+/* 데이터 · 백업 */
+.datadir { font: 13px/1.5 Consolas, monospace; background: var(--soft); border-radius: var(--r-sm); padding: 8px 10px; word-break: break-all; }
+.warnline { background: var(--warnsoft); color: var(--warn); border-radius: 9px; padding: 6px 10px; margin: 8px 0 0; }
+
+/* 성장 기록 */
+.growbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; position: sticky; top: 0; z-index: 2;
+  background: var(--panel); backdrop-filter: blur(10px); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; box-shadow: var(--shadow); }
+.gmonth { display: flex; align-items: center; gap: 10px; margin: 18px 0 8px; }
+.gmonth b { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: var(--onaccent); border-radius: 999px; padding: 3px 14px; font-size: 13px; }
+.gmonth::after { content: ""; flex: 1; height: 2px; background: var(--line); border-radius: 2px; }
+.gitem { display: flex; gap: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 12px; margin-bottom: 8px;
+  box-shadow: var(--shadow); cursor: pointer; transition: .12s; }
+.gitem:hover { border-color: var(--accent); }
+.gitem.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, var(--panel)); }
+.gitem .ck { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--line); flex: none; display: grid; place-items: center; font-size: 12px; color: #fff; margin-top: 2px; }
+.gitem.on .ck { background: var(--accent); border-color: var(--accent); }
+.gitem img { width: 76px; height: 76px; object-fit: cover; border-radius: 12px; flex: none; }
+.gitem .gt { flex: 1; min-width: 0; font-size: 13px; }
+.gitem .gt .d { font-size: 11.5px; color: var(--muted); }
+.gitem .gt .s { font-weight: bold; margin: 2px 0 4px; }
+.gitem .gt .k { color: var(--muted); }
+.gitem .gt .k b { color: var(--text); }
+.gitem .new { display: inline-block; background: color-mix(in srgb, var(--accent2) 18%, var(--solid)); color: light-dark(#c2508a, #f2a3c8); border-radius: 8px; padding: 1px 7px; font-size: 11.5px; font-weight: bold; margin-top: 4px; }
+.gitem .op { align-self: center; }
+
 /* 폰에서 쓰기 — PC 설정 칸 */
 .phonebox { display: flex; gap: 18px; align-items: flex-start; margin-top: 12px; flex-wrap: wrap; }
 .phonebox img { width: 180px; height: 180px; border-radius: 12px; border: 1px solid var(--line); background: #fff; }
@@ -341,6 +367,24 @@ body.phone .pc-only { display: none !important; }
   <section id="settings">
     <div class="head"><div><h1>설정</h1><p>한 번 적어 두면 계속 써요.</p></div></div>
     <div class="box pc-only">
+      <div class="step"><i>💾</i>데이터 · 백업</div>
+      <p class="hint" style="margin:0 0 4px">말투·지난 글·캠페인·장부가 모두 이 폴더에 있어요.</p>
+      <div class="datadir"><span id="dataDir"></span> <span class="tag" id="dataKind"></span></div>
+      <div class="row" id="dataBtns" style="margin-top:10px"></div>
+      <p class="hint warnline" id="companyOd" hidden></p>
+      <ul class="hint" style="margin:8px 0 0;padding-left:18px">
+        <li><b>OneDrive·구글 드라이브</b> 폴더로 옮기면 백업이 저절로 되고, 다른 PC 에서 같은 폴더를 고르면 <b>같은 데이터</b>를 써요(두 PC 에서 동시에 쓰진 마세요).</li>
+        <li>옮길 땐 지금 데이터를 <b>복사</b>해요. 원래 자리의 데이터는 지우지 않아요.</li>
+      </ul>
+      <div class="row" style="margin-top:14px">
+        <button class="btn" id="bkFull">⬇ 백업 받기 (사진 포함)</button>
+        <button class="btn" id="bkLite">⬇ 사진 빼고</button>
+        <button class="btn" id="bkRestore">⬆ 백업에서 되살리기</button>
+        <input type="file" id="bkFile" accept=".zip,application/zip" hidden>
+      </div>
+      <p class="hint" id="bkAuto" style="margin:8px 0 0"></p>
+    </div>
+    <div class="box pc-only">
       <div class="step"><i>📱</i>폰에서 쓰기 <span class="hint">— 아이폰·아이패드로 같은 와이파이에서</span></div>
       <div class="row"><button class="btn main" id="phoneToggle">켜기</button><span class="hint" id="phoneState">꺼져 있어요. 켜면 이 PC 가 켜져 있는 동안만 열려요.</span></div>
       <div class="phonebox" id="phoneInfo" hidden>
@@ -376,7 +420,17 @@ body.phone .pc-only { display: none !important; }
 
   <section id="posts">
     <div class="head"><div><h1>지난 글</h1><p>눌러서 열면 이어서 다듬을 수 있어요.</p></div></div>
+    <div class="row filt" id="postView"><button data-v="all" class="on">전체</button><button data-v="growth">👶 성장 기록</button></div>
     <div class="box list" id="postList"></div>
+    <div id="growthView" hidden>
+      <div class="growbar" id="growBar" hidden>
+        <button class="btn" id="growAll">모두 고르기</button>
+        <span class="hint" id="growCount"></span>
+        <span class="grow"></span>
+        <button class="btn main" id="growCompose">✍️ 고른 기록 모아서 글 쓰기</button>
+      </div>
+      <div id="growList"></div>
+    </div>
   </section>
 
   <section id="camps">
@@ -513,7 +567,8 @@ body.phone .pc-only { display: none !important; }
         <details><summary>왜 자동으로 올려 주지 않나요?</summary><p>네이버는 자동 프로그램으로 글을 올리는 걸 약관으로 막고 있어서, 걸리면 저품질 처리나 계정 정지가 될 수 있어요. 그래서 글 만들기까지만 하고 올리기는 직접 해요.</p></details>
         <details><summary>협찬·광고 글은요?</summary><p>메모에 <code>#협찬</code> 이나 <code>#광고</code> 를 넣으면 첫 줄에 표기 문장이 들어가요. 협찬 글에 표기를 빼면 표시광고법 위반이 될 수 있어요.</p></details>
         <details><summary>글이 안 나오고 오류가 떠요.</summary><p>왼쪽 아래가 빨간 점이면 claude 를 못 찾은 거예요. 설치 후 터미널에서 <code>claude</code> 를 실행해 로그인이 되어 있는지 확인하고 앱을 다시 켜 주세요. 사용량 한도에 걸렸을 때도 오류가 나요 — 잠시 뒤 다시 해 보세요.</p></details>
-        <details><summary>만든 글과 사진은 어디에 저장되나요?</summary><p>이 PC 의 <code>%APPDATA%\PostKit</code> 에만 있어요. <b>⚙️ 설정 → 📁 데이터 폴더 열기</b>로 볼 수 있어요. 📂 지난 글에서 다시 열어 이어서 다듬을 수 있어요.</p></details>
+        <details><summary>만든 글과 사진은 어디에 저장되나요? 백업은요?</summary><p>처음엔 이 PC 의 <code>%APPDATA%\PostKit</code> 에 있어요. <b>⚙️ 설정 → 💾 데이터 · 백업</b>에서 OneDrive·구글 드라이브 폴더로 옮기면 백업이 저절로 되고, 다른 PC 에서 같은 폴더를 고르면 같은 데이터를 써요. 「백업 받기」로 zip 을 받아 둘 수도 있고, 앱이 하루 한 번 사진 빼고 자동 백업도 해요.</p></details>
+        <details><summary>👶 성장 기록은 어떻게 모아요?</summary><p><b>📂 지난 글 → 👶 성장 기록</b>을 누르면 「개월 수」가 있는 육아 글이 개월 순서로 모여요. 기록을 골라 「모아서 글 쓰기」를 누르면 그 기록과 대표 사진으로 새 글이 열려요 — 돌 기념·연말 정리 글에 좋아요.</p></details>
         <details><summary>앱은 어떻게 끄나요?</summary><p>창을 닫으면 1분 안에 저절로 꺼져요. 글을 만드는 중이면 끝난 뒤에 꺼져요.</p></details>
       </div>
     </div>
@@ -549,7 +604,8 @@ const picon = p => `<span class="pi ${esc(p)}" style="${pc(p)}">${ICON[p] || "�
 document.querySelectorAll("nav button[data-tab]").forEach(b => b.onclick = () => {
   document.querySelectorAll("nav button[data-tab]").forEach(x => x.classList.toggle("on", x === b));
   document.querySelectorAll("section").forEach(s => s.classList.toggle("on", s.id === b.dataset.tab));
-  if (b.dataset.tab === "posts") loadPosts();
+  if (b.dataset.tab === "posts") { loadPosts(); if (!$("#growthView").hidden) loadGrowth(); }
+  if (b.dataset.tab === "settings") loadData();
   if (b.dataset.tab === "camps") loadCamps();
   if (b.dataset.tab === "ledger") loadLedger();
   main.scrollTop = 0;
@@ -928,6 +984,110 @@ $("#saveKids").onclick = () => api("/api/config", { kids: { birthday: $("#kidBir
   .then(d => { S.config = d; toast("저장했어요."); }).catch(fail);
 $("#saveTags").onclick =() => api("/api/config", { fixed_tags: $("#fixedTags").value.trim() }).then(() => toast("저장했어요 — 다음에 만드는 글부터 들어가요.")).catch(fail);
 $("#openData").onclick = () => api("/api/open", { what: "data" }).catch(fail);
+
+// ---------- 데이터 폴더 · 백업 ----------
+async function loadData() {
+  if (PHONE) return;
+  const d = await api("/api/data").catch(() => null);
+  if (!d) return;
+  $("#dataDir").textContent = d.dir;
+  $("#dataKind").textContent = d.is_default ? "기본 자리 (이 PC 에만 있어요)" : "옮긴 자리";
+  $("#dataBtns").innerHTML = d.clouds.map((c, i) => `<button class="btn main" data-cloud="${i}">☁️ ${esc(c.name)}로 옮기기</button>`).join("") +
+    '<button class="btn" id="dataPick">📁 다른 폴더 고르기</button>';
+  $("#dataBtns").querySelectorAll("[data-cloud]").forEach(b => b.onclick = () => moveData(d.clouds[+b.dataset.cloud].path, d.clouds[+b.dataset.cloud].name));
+  $("#dataPick").onclick = async () => {
+    toast("폴더 고르기 창이 떴어요 — 안 보이면 작업 표시줄을 보세요.");
+    const r = await api("/api/data/pick", {}).catch(e => { fail(e); return {}; });
+    if (r.path) moveData(r.path, r.path);
+  };
+  $("#companyOd").hidden = !d.company_onedrive;
+  $("#companyOd").textContent = "⚠️ 회사 OneDrive(" + d.company_onedrive + ")에는 개인 부업 자료를 두지 마세요. 퇴사하면 못 꺼내고, 회사가 볼 수 있어요.";
+  const bks = await api("/api/backups").catch(() => []);
+  const autos = bks.filter(b => b.name.startsWith("auto-"));
+  $("#bkAuto").textContent = "자동 백업: 하루 한 번 사진 빼고 이 PC 에 최근 7개 — " + (autos.length ? "마지막 " + autos[0].name.slice(5, 13).replace(/(\d{4})(\d\d)(\d\d)/, "$1.$2.$3") + ", " + autos.length + "개" : "아직 없어요") + " (" + d.backups + ")";
+}
+async function moveData(path, label) {
+  if (!confirm(label + " 쪽으로 데이터 폴더를 옮길까요?\n\n· 거기에 글 도우미 데이터가 이미 있으면(다른 PC 에서 옮겨 둔 것) 그걸 그대로 써요.\n· 없으면 지금 데이터를 복사해요. 원래 자리의 데이터는 지우지 않아요.")) return;
+  try {
+    const r = await api("/api/data/move", { path });
+    alert(r.used_existing ? "옮겼어요. 그 폴더에 있던 데이터를 쓰기 시작해요.\n" + r.dir
+                          : "옮겼어요. 파일 " + r.copied + "개를 복사했어요.\n" + r.dir + "\n\n원래 자리(" + r.old + ")는 그대로 남아 있어요.");
+    location.reload();
+  } catch (e) { fail(e); }
+}
+$("#bkFull").onclick = () => { location.href = "/api/backup.zip?photos=1"; toast("백업 파일을 만들고 있어요 — 다 되면 내려받기 폴더에 저장돼요."); };
+$("#bkLite").onclick = () => { location.href = "/api/backup.zip?photos=0"; toast("백업 파일을 만들고 있어요."); };
+$("#bkRestore").onclick = () => $("#bkFile").click();
+$("#bkFile").onchange = async e => {
+  const f = e.target.files[0];
+  e.target.value = "";
+  if (!f) return;
+  if (!confirm("「" + f.name + "」에서 되살릴까요?\n\n· 백업에 있는 글·말투·캠페인·장부가 지금 데이터에 덮어써져요(백업에 없는 건 그대로).\n· 되살리기 전에 지금 상태를 자동으로 백업해 둬요.")) return;
+  try {
+    toast("되살리는 중…");
+    const r = await api("/api/restore", f, true);
+    alert("되살렸어요 — 파일 " + r.restored + "개.\n되살리기 전 상태는 여기 백업해 뒀어요:\n" + r.before);
+    location.reload();
+  } catch (err) { fail(err); }
+};
+
+// ---------- 성장 기록 ----------
+S.growPick = new Set();
+$("#postView").querySelectorAll("button").forEach(b => b.onclick = () => {
+  $("#postView").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+  const g = b.dataset.v === "growth";
+  $("#postList").hidden = g; $("#growthView").hidden = !g;
+  if (g) loadGrowth();
+});
+async function loadGrowth() {
+  const d = await api("/api/growth").catch(e => { fail(e); return { names: [], entries: [] }; });
+  S.growth = d;
+  const [a, b] = d.names.length ? [d.names[0], d.names[1] || "둘째"] : ["첫째", "둘째"];
+  $("#growBar").hidden = !d.entries.length;
+  if (!d.entries.length) {
+    $("#growList").innerHTML = '<div class="blank"><span class="e">👶</span>아직 성장 기록이 없어요.<br>✍️ 쓰기에서 <b>👶 쌍둥이 육아</b> 틀로 쓰면 「개월 수」가 있는 글이 여기에 모여요.<br>⚙️ 설정에 아기 생일을 넣어 두면 개월 수가 자동으로 채워져요.</div>';
+    return;
+  }
+  let html = "", last = null;
+  for (const e of d.entries) {
+    if (e.month !== last) { html += `<div class="gmonth"><b>생후 ${e.month}개월</b></div>`; last = e.month; }
+    const kids = [e.first && `<b>${esc(a)}</b> ${esc(e.first)}`, e.second && `<b>${esc(b)}</b> ${esc(e.second)}`].filter(Boolean).join(" · ");
+    html += `<div class="gitem ${S.growPick.has(e.name) ? "on" : ""}" data-name="${esc(e.name)}"><span class="ck">✓</span>
+      ${e.photo ? `<img src="/api/photo?name=${encodeURIComponent(e.name)}&file=${encodeURIComponent(e.photo)}" alt="">` : ""}
+      <div class="gt"><div class="d">${esc(e.age)}${e.date ? " · " + esc(e.date) : ""}</div><div class="s">${esc(e.scene || "(장면 없음)")}</div>
+        ${kids ? `<div class="k">${kids}</div>` : ""}${e.new ? `<span class="new">✨ ${esc(e.new)}</span>` : ""}</div>
+      <button class="btn op" data-open="${esc(e.name)}">열기</button></div>`;
+  }
+  $("#growList").innerHTML = html;
+  $("#growList").querySelectorAll(".gitem").forEach(el => el.onclick = ev => {
+    if (ev.target.dataset.open) return openPost(ev.target.dataset.open);
+    const n = el.dataset.name;
+    S.growPick.has(n) ? S.growPick.delete(n) : S.growPick.add(n);
+    el.classList.toggle("on", S.growPick.has(n));
+    growCount();
+  });
+  growCount();
+}
+function growCount() {
+  const n = [...S.growPick].filter(x => (S.growth?.entries || []).some(e => e.name === x)).length;
+  $("#growCount").textContent = n ? n + "개 골랐어요" : "기록을 눌러 고르세요";
+  $("#growCompose").disabled = !n;
+}
+$("#growAll").onclick = () => {
+  const all = (S.growth?.entries || []).map(e => e.name);
+  const every = all.every(n => S.growPick.has(n));
+  S.growPick = new Set(every ? [] : all);
+  loadGrowth();
+};
+$("#growCompose").onclick = async () => {
+  if (Object.values(S.busy).some(Boolean)) return toast("글을 만드는 중이에요. 끝난 뒤에 해 주세요.");
+  try {
+    const { name } = await api("/api/growth/compose", { names: [...S.growPick] });
+    S.growPick = new Set();
+    await openPost(name);
+    toast("기록을 모은 메모와 대표 사진을 넣었어요. 「지금 마음」을 채우고 글을 만들어 보세요.");
+  } catch (e) { fail(e); }
+};
 
 // ---------- 폰에서 쓰기(PC 쪽 켜고 끄기) ----------
 function showPhone(st) {

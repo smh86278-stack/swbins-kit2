@@ -61,6 +61,68 @@ def photo_names(post_dir):
     return order + [n for n in have if n not in order]
 
 
+MAX_SIDE = 1600            # 사진 긴 변을 이만큼으로 줄인다(폰 원본 그대로면 느리다)
+WEEK = "월화수목금토일"
+
+
+def process_photo(path, max_side=MAX_SIDE):
+    """넣은 사진 손질 — 찍은 날짜(EXIF)를 읽고, 돌아간 사진은 바로 세우고, 크면 줄인다.
+    다시 저장하면 EXIF(위치 정보 포함)는 빠진다. 찍은 날짜 'YYYY-MM-DD' 를 돌려준다(없으면 '')."""
+    try:
+        from PIL import Image, ImageOps
+    except ImportError:
+        return ""
+    try:
+        with Image.open(path) as im:
+            exif = im.getexif()
+            raw = ""
+            try:
+                raw = exif.get_ifd(0x8769).get(36867) or ""      # DateTimeOriginal
+            except Exception:
+                pass
+            raw = str(raw or exif.get(306) or "")                # DateTime
+            m = re.match(r"(\d{4})[:\-](\d{2})[:\-](\d{2})", raw)
+            date = "%s-%s-%s" % m.groups() if m else ""
+            fmt = im.format
+            if fmt == "GIF":                                     # 움직이는 그림은 그대로
+                return date
+            turned = exif.get(274, 1) not in (1, None)           # Orientation
+            big = max(im.size) > max_side or os.path.getsize(path) > 2 * 1024 * 1024
+            if not (turned or big):
+                return date
+            out = ImageOps.exif_transpose(im)
+            out.thumbnail((max_side, max_side), Image.LANCZOS)
+            if fmt == "JPEG":
+                out.convert("RGB").save(path + ".tmp", "JPEG", quality=85, optimize=True)
+            else:
+                out.save(path + ".tmp", fmt, optimize=True)
+        os.replace(path + ".tmp", path)
+        return date
+    except Exception:
+        try:
+            os.remove(path + ".tmp")
+        except OSError:
+            pass
+        return ""
+
+
+def date_text(ymd):
+    """'2026-10-18' → '2026년 10월 18일 (일)'."""
+    try:
+        d = datetime.strptime(ymd, "%Y-%m-%d")
+    except ValueError:
+        return ""
+    return "%d년 %d월 %d일 (%s)" % (d.year, d.month, d.day, WEEK[d.weekday()])
+
+
+def load_templates():
+    try:
+        with open(os.path.join(RES, "templates.json"), encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return []
+
+
 def save_photo_order(post_dir, names):
     with open(os.path.join(post_dir, "order.json"), "w", encoding="utf-8") as f:
         json.dump([str(n) for n in names], f, ensure_ascii=False)

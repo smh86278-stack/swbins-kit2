@@ -14,15 +14,20 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 WORK = os.path.join(HERE, "build")
-ICO = os.path.join(HERE, "app.ico")                       # 있으면 아이콘으로
+ICO = os.path.join(HERE, "app.ico")                       # 없으면 make_icon.py 로 만든다
 
 
 def main():
-    look = ["--onefile", "--noconsole"] + (["--icon", ICO] if os.path.isfile(ICO) else [])
+    if not (os.path.isfile(ICO) and os.path.isfile(os.path.join(HERE, "icon.png"))):
+        subprocess.check_call([sys.executable, os.path.join(HERE, "make_icon.py")], cwd=HERE)
+    look = ["--onefile", "--noconsole", "--icon", ICO]
     cmd = [sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean", *look,
            "--name", "PostKit",
            "--add-data", os.path.join(HERE, "ui.html") + os.pathsep + ".",
            "--add-data", os.path.join(HERE, "platforms.json") + os.pathsep + ".",
+           "--add-data", os.path.join(HERE, "templates.json") + os.pathsep + ".",
+           "--add-data", os.path.join(HERE, "icon.png") + os.pathsep + ".",            # 창·화면 아이콘
+           "--hidden-import", "PIL.Image",                                              # 사진 줄이기(gen.process_photo 가 함수 안에서 불러온다)
            "--add-data", os.path.join(HERE, "prompts") + os.pathsep + "prompts",
            "--distpath", os.path.join(HERE, "dist"), "--workpath", WORK, "--specpath", WORK,
            os.path.join(HERE, "app.py")]

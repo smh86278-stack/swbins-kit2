@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>글 도우미</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%9D%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="/icon.png">
 <style>
 :root {
   color-scheme: light dark;
@@ -32,8 +32,7 @@ body {
 /* 왼쪽 */
 nav { width: 168px; padding: 18px 12px; display: flex; flex-direction: column; gap: 4px; flex: none; }
 .logo { display: flex; align-items: center; gap: 8px; padding: 2px 8px 18px; }
-.logo .mark { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; font-size: 18px;
-  background: linear-gradient(135deg, var(--accent), var(--accent2)); box-shadow: var(--shadow2); }
+.logo .mark { width: 36px; height: 36px; border-radius: 11px; box-shadow: var(--shadow2); }
 .logo b { font-size: 15px; letter-spacing: -.3px; }
 .logo small { display: block; font-size: 11px; color: var(--muted); font-weight: normal; }
 nav button { border: 0; background: none; color: var(--muted); padding: 9px 12px; border-radius: var(--r-sm); cursor: pointer;
@@ -115,6 +114,10 @@ code { background: var(--accentsoft); color: var(--accent); padding: 0 5px; bord
 .pi.instagram { background: linear-gradient(45deg, #f9ce34, #ee2a7b, #6228d7); }
 .pi.tiktok { color: light-dark(#fff, #111); }
 
+.tpls { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-bottom: 7px; }
+.tpls button { border: 1px solid var(--line); background: var(--solid); color: var(--text); border-radius: 999px; padding: 3px 11px;
+  font: inherit; font-size: 12.5px; cursor: pointer; transition: .15s; }
+.tpls button:hover { border-color: var(--accent); background: var(--accentsoft); color: var(--accent); }
 .go { display: flex; align-items: center; gap: 12px; padding-top: 4px; }
 
 /* 결과 카드 */
@@ -188,7 +191,7 @@ code { background: var(--accentsoft); color: var(--accent); padding: 0 5px; bord
 </head>
 <body>
 <nav>
-  <div class="logo"><div class="mark">📝</div><b>글 도우미<small>내 말투로 쓰는 SNS 글</small></b></div>
+  <div class="logo"><img class="mark" src="/icon.png" alt=""><b>글 도우미<small>내 말투로 쓰는 SNS 글</small></b></div>
   <button data-tab="write" class="on">✍️ 쓰기</button>
   <button data-tab="voice">🗣️ 내 말투</button>
   <button data-tab="posts">📂 지난 글</button>
@@ -206,7 +209,8 @@ code { background: var(--accentsoft); color: var(--accent); padding: 0 5px; bord
       <div class="grid2">
         <div>
           <div class="step"><i>1</i>메모 <span class="hint">— 직접 겪은 사실일수록 내 글 같아져요</span></div>
-          <textarea id="memo" rows="5" placeholder="예) 을지로 OO집 김치찌개 7천원. 점심 웨이팅 20분. 고기 많음, 국물은 좀 짰음. 공깃밥 리필 무료"></textarea>
+          <div class="tpls" id="tpls"><span class="hint">틀:</span></div>
+          <textarea id="memo" rows="7" placeholder="예) 을지로 OO집 김치찌개 7천원. 점심 웨이팅 20분. 고기 많음, 국물은 좀 짰음. 공깃밥 리필 무료"></textarea>
           <label class="small">제목 후보 (비워도 돼요) · 협찬이면 메모에 <code>#협찬</code></label>
           <input type="text" id="title">
         </div>
@@ -243,7 +247,7 @@ code { background: var(--accentsoft); color: var(--accent); padding: 0 5px; bord
       <div class="step"><i>⚙</i>설정</div>
       <label class="small">네이버 카페 글쓰기 주소 (카페마다 달라요 — 카페 글쓰기 화면 주소를 붙여 넣으세요)</label>
       <div class="row"><input type="text" id="cafeUrl" placeholder="https://cafe.naver.com/..." style="flex:1"><button class="btn" id="saveCafe">저장</button></div>
-      <div class="row" style="margin-top:12px"><button class="btn" id="openData">📁 데이터 폴더 열기</button>
+      <div class="row" style="margin-top:12px"><button class="btn" id="openData">📁 데이터 폴더 열기</button><button class="btn" id="mkLinks">🔗 바탕 화면·시작 메뉴 바로가기 만들기</button>
         <span class="hint">올리기는 직접 해요 — 자동 발행은 계정 정지 위험 때문에 일부러 넣지 않았어요.</span></div>
     </div>
   </section>
@@ -261,7 +265,7 @@ code { background: var(--accentsoft); color: var(--accent); padding: 0 5px; bord
         <h2><span class="e">🚀</span>처음 한 번만</h2>
         <ol>
           <li><b>Claude Code</b> 를 설치하고, 터미널에서 <code>claude</code> 를 한 번 실행해 로그인해요.</li>
-          <li>왼쪽 아래가 <b>● AI 연결됨</b> 이면 준비 끝.</li>
+          <li>왼쪽 아래가 <b>● AI 연결됨</b> 이면 준비 끝. 처음 켜면 바탕 화면·시작 메뉴에 <b>글 도우미</b> 바로가기가 생겨요.</li>
           <li><b>🗣️ 내 말투</b>에 예전에 직접 쓴 글을 3~5편 넣어 두면 훨씬 내 글 같아져요.</li>
           <li>네이버 카페에 올린다면 <b>🗣️ 내 말투 → 설정</b>에 카페 글쓰기 주소를 넣어요.</li>
         </ol>
@@ -269,9 +273,9 @@ code { background: var(--accentsoft); color: var(--accent); padding: 0 5px; bord
       <div class="box">
         <h2><span class="e">✍️</span>글 쓰는 순서</h2>
         <ol>
-          <li><b>메모</b> — 직접 겪은 사실을 짧게. 문장이 아니어도 돼요.</li>
+          <li><b>메모</b> — 직접 겪은 사실을 짧게. 문장이 아니어도 돼요. 뭘 적을지 막막하면 <b>틀</b>(🍲 맛집 · ☕ 카페 …)을 눌러 빈칸만 채워요. 비워 둔 칸은 글에 안 들어가요.</li>
           <li><b>어디에 올릴지</b> 고르기 — 여러 개 골라도 한 번에 써요.</li>
-          <li><b>사진</b> 넣기 — 끌어다 놓거나 <kbd>Ctrl</kbd>+<kbd>V</kbd>. AI 가 사진을 직접 보고 글에 반영해요.</li>
+          <li><b>사진</b> 넣기 — 끌어다 놓거나 <kbd>Ctrl</kbd>+<kbd>V</kbd>. AI 가 사진을 직접 보고 글에 반영해요. 큰 사진은 알아서 줄이고, 찍은 날짜는 메모에 넣어 줘요(원본 사진은 그대로예요).</li>
           <li><b>✨ 글 만들기</b> — 30초~1분. 나중에 다른 플랫폼이 더 필요하면 체크하고 <b>＋ 새로 고른 곳만 만들기</b>.</li>
           <li><b>다듬기</b> — 「짧게」「캐주얼하게」 버튼이나 말로 부탁해요. 직접 고쳐도 자동 저장돼요.</li>
           <li><b>📋 복사 → ✏️ 글쓰기 창 열기</b> → 붙여 넣고 사진 올리고 <b>발행은 직접</b>.</li>
@@ -373,6 +377,8 @@ async function loadState() {
   if (!d.claude) toast(d.no_claude);
   $("#plats").innerHTML = d.platforms.map(p =>
     `<label style="${pc(p.id)}"><input type="checkbox" value="${esc(p.id)}" ${d.config.default_platforms.includes(p.id) ? "checked" : ""}>${picon(p.id)}${esc(p.name)}</label>`).join("");
+  $("#tpls").innerHTML = '<span class="hint">틀:</span>' + d.templates.map((t, i) => `<button data-t="${i}" title="메모 칸에 빈칸 틀을 깔아요">${esc(t.name)}</button>`).join("");
+  $("#tpls").querySelectorAll("[data-t]").forEach(b => b.onclick = () => useTemplate(d.templates[+b.dataset.t]));
   $("#voiceNote").value = d.config.voice_note || "";
   $("#cafeUrl").value = (d.config.write_urls || {}).naver_cafe || "";
   $("#voiceList").innerHTML = d.voice.length ? "<h2>넣은 글 " + d.voice.length + "편</h2>" + d.voice.map(v =>
@@ -425,17 +431,42 @@ async function ensurePost() {
   }
 }
 
+// 메모 틀 — 비었으면 그대로, 쓰던 게 있으면 아래에 붙인다
+function useTemplate(t) {
+  const m = $("#memo");
+  if (m.value.trim() && !confirm("지금 메모 아래에 「" + t.name + "」 틀을 붙일까요?")) return;
+  m.value = m.value.trim() ? m.value.trimEnd() + "\n\n" + t.memo : t.memo;
+  m.focus();
+  const at = m.value.indexOf(": ", m.value.length - t.memo.length);       // 첫 빈칸으로
+  if (at >= 0) m.setSelectionRange(at + 2, at + 2);
+}
+
+// 사진에서 읽은 찍은 날짜를 메모에 — 빈 '날짜:' 칸이 있으면 채우고, 날짜 얘기가 없으면 한 줄 덧붙인다
+function fillDate(dates) {
+  const ds = dates.filter(x => x.date).sort((a, b) => a.date.localeCompare(b.date));
+  if (!ds.length) return;
+  const m = $("#memo"), text = ds[0].date_text;
+  if (/^날짜:[ \t]*$/m.test(m.value)) m.value = m.value.replace(/^날짜:[ \t]*$/m, "날짜: " + text);
+  else if (!/날짜/.test(m.value)) m.value = (m.value.trimEnd() ? m.value.trimEnd() + "\n" : "") + "날짜: " + text;
+  else return;
+  toast("사진에서 찍은 날짜를 읽어 메모에 넣었어요: " + text);
+  if (S.name) api("/api/post/save", { name: S.name, memo: m.value, title: $("#title").value }).catch(() => {});
+}
+
 async function addFiles(files) {
   files = [...files].filter(f => /^image\/(jpeg|png|webp|gif)$/.test(f.type));
   if (!files.length) return toast("jpg·png·webp·gif 사진만 넣을 수 있어요.");
+  const dates = [];
   try {
     await ensurePost();
     for (const f of files) {
       const d = await api(`/api/photo?name=${encodeURIComponent(S.name)}&file=${encodeURIComponent(f.name)}`, f, true);
       S.photos.push(d.file);
+      dates.push(d);
       renderPhotos();
     }
   } catch (e) { fail(e); }
+  fillDate(dates);
 }
 $("#pick").onclick = () => $("#file").click();
 $("#file").onchange = e => { addFiles(e.target.files); e.target.value = ""; };
@@ -603,6 +634,7 @@ $("#saveCafe").onclick = () => {
   api("/api/config", { write_urls: Object.assign({}, S.config.write_urls, { naver_cafe: u }) }).then(() => { toast("저장했어요."); loadState(); }).catch(fail);
 };
 $("#openData").onclick = () => api("/api/open", { what: "data" }).catch(fail);
+$("#mkLinks").onclick = () => api("/api/shortcuts", {}).then(() => toast("바탕 화면과 시작 메뉴에 「글 도우미」를 만들었어요.")).catch(fail);
 
 // ---------- 지난 글 ----------
 const day = n => /^\d{8}/.test(n) ? n.slice(4, 6) + "." + n.slice(6, 8) : "";

@@ -54,6 +54,38 @@ class PromptTest(unittest.TestCase):
         self.assertIn("내 글", s2)
 
 
+class PhotoTest(unittest.TestCase):
+    def test_shrink_turn_and_date(self):
+        from PIL import Image
+        with tempfile.TemporaryDirectory() as root:
+            p = os.path.join(root, "a.jpg")
+            im = Image.new("RGB", (4000, 3000), (200, 100, 100))
+            ex = Image.Exif()
+            ex[274] = 6                                          # 90도 돌아간 사진
+            ex.get_ifd(0x8769)[36867] = "2026:10:18 12:30:00"
+            im.save(p, exif=ex.tobytes())
+            self.assertEqual(gen.process_photo(p), "2026-10-18")
+            with Image.open(p) as out:
+                self.assertEqual(out.size, (1200, 1600))         # 바로 세우고 긴 변 1600
+                self.assertNotIn(274, out.getexif())
+            small = os.path.join(root, "b.png")
+            Image.new("RGB", (300, 200)).save(small)
+            before = os.path.getmtime(small)
+            self.assertEqual(gen.process_photo(small), "")
+            self.assertEqual(os.path.getmtime(small), before)    # 작은 사진은 손대지 않는다
+            bad = os.path.join(root, "c.jpg")
+            with open(bad, "wb") as f:
+                f.write(b"not an image")
+            self.assertEqual(gen.process_photo(bad), "")
+
+    def test_date_text_and_templates(self):
+        self.assertEqual(gen.date_text("2026-10-18"), "2026년 10월 18일 (일)")
+        self.assertEqual(gen.date_text("x"), "")
+        ts = gen.load_templates()
+        self.assertGreaterEqual(len(ts), 4)
+        self.assertTrue(all(t["memo"] and t["name"] for t in ts))
+
+
 class ParseTest(unittest.TestCase):
     def test_single_json(self):
         r = gen.parse_result(json.dumps({"type": "result", "subtype": "success", "result": "본문", "session_id": "abc"}))

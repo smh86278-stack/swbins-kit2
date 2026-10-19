@@ -36,6 +36,7 @@ POSTS = os.path.join(DATA, "posts")
 VOICE = os.path.join(DATA, "voice")
 CFG = os.path.join(DATA, "config.json")
 TOKEN = secrets.token_urlsafe(24)
+FROZEN = bool(getattr(sys, "frozen", False))      # PostKit.exe 로 돌고 있나
 NAME_RE = re.compile(r"^[^\\/:*?\"<>|\x00-\x1f]{1,120}$")
 
 JOBS = {}                      # job id → {platform id: {status, text, error}}
@@ -206,6 +207,42 @@ def open_folder(path):
         subprocess.Popen(["open" if sys.platform == "darwin" else "xdg-open", path])
 
 
+def make_shortcuts():
+    """시작 메뉴·바탕 화면에 '글 도우미' 바로가기(지금 exe 를 가리킨다). 만든 곳 목록, 실패면 []."""
+    if not IS_WIN:
+        return []
+    exe = sys.executable
+    ps = ("$s = New-Object -ComObject WScript.Shell; $made = @(); "
+          "foreach ($dir in @([Environment]::GetFolderPath('Programs'), [Environment]::GetFolderPath('Desktop'))) { "
+          "  $l = $s.CreateShortcut((Join-Path $dir '글 도우미.lnk')); $l.TargetPath = $env:PK_EXE; "
+          "  $l.WorkingDirectory = Split-Path $env:PK_EXE; $l.IconLocation = $env:PK_EXE + ',0'; "
+          "  $l.Description = '사진·메모로 블로그·인스타 글 쓰기'; $l.Save(); $made += $dir }; $made -join '|'")
+    try:
+        p = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps],
+                           capture_output=True, timeout=30, env=dict(os.environ, PK_EXE=exe),
+                           creationflags=gen.CREATE_NO_WINDOW)
+        out = p.stdout.decode("utf-8", "replace").strip()
+        if p.returncode != 0 or not out:
+            log("바로가기 실패", p.stderr.decode("utf-8", "replace")[-300:])
+            return []
+        log("바로가기", out)
+        return out.split("|")
+    except (OSError, subprocess.TimeoutExpired) as e:
+        log("바로가기 실패", e)
+        return []
+
+
+def first_run_shortcuts():
+    """exe 를 처음 켰을 때 한 번 바로가기를 만들어 둔다(지우면 다시 만들지 않는다 — 설정에서 다시 만들기)."""
+    cfg = load_cfg()
+    if not FROZEN or cfg.get("shortcuts_made"):
+        return
+    if make_shortcuts():
+        cfg["shortcuts_made"] = True
+        os.makedirs(DATA, exist_ok=True)
+        write_text(CFG, json.dumps(cfg, ensure_ascii=False, indent=2))
+
+
 def open_window(url):
     """Edge 앱 창(따로 둔 프로필). 없으면 기본 브라우저."""
     if IS_WIN:
@@ -258,6 +295,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if u.path == "/":
                 html = read_text(os.path.join(gen.RES, "ui.html")).replace("__TOKEN__", TOKEN)
                 return self.send(200, html.encode("utf-8"), "text/html; charset=utf-8")
+            if u.path == "/icon.png":
+                with open(os.path.join(gen.RES, "icon.png"), "rb") as f:
+                    return self.send(200, f.read(), "image/png")
             if u.path == "/api/ping":
                 LAST_PING[0] = time.time()
                 return self.send(200, {"app": APP})
@@ -266,7 +306,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 voice = sorted(n for n in os.listdir(VOICE) if n.endswith(".txt")) if os.path.isdir(VOICE) else []
                 claude = gen.find_claude()
                 return self.send(200, {"claude": claude[0] if claude else "", "no_claude": gen.NO_CLAUDE,
-                                       "platforms": platforms(), "config": cfg,
+                                       "platforms": platforms(), "config": cfg, "templates": gen.load_templates(),
+                                       "frozen": FROZEN,
                                        "voice": [{"name": n, "text": read_text(os.path.join(VOICE, n))} for n in voice]})
             if u.path == "/api/job":
                 with LOCK:
@@ -307,7 +348,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     p, i = os.path.join(d, "photos", "%s-%d%s" % (base, i, ext)), i + 1
                 with open(p, "wb") as f:
                     f.write(data)
-                return self.send(200, {"file": os.path.basename(p)})
+                date = gen.process_photo(p)             # 크면 줄이고, 찍은 날짜를 읽는다
+                return self.send(200, {"file": os.path.basename(p), "date": date, "date_text": gen.date_text(date)})
             b = self.body_json()
             if u.path == "/api/post/new":
                 os.makedirs(POSTS, exist_ok=True)
@@ -369,6 +411,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 os.makedirs(DATA, exist_ok=True)
                 write_text(CFG, json.dumps(cfg, ensure_ascii=False, indent=2))
                 return self.send(200, cfg)
+            if u.path == "/api/shortcuts":
+                if not FROZEN:
+                    raise ValueError("바로가기는 PostKit.exe 로 실행했을 때만 만들 수 있어요.")
+                made = make_shortcuts()
+                if not made:
+                    raise ValueError("바로가기를 만들지 못했어요 — app.log 를 보세요.")
+                return self.send(200, {"made": made})
             if u.path == "/api/open":
                 if b.get("what") == "folder":
                     d = post_path(b.get("name", ""))
@@ -430,6 +479,7 @@ def main():
     url = "http://127.0.0.1:%d/" % port
     log("시작", url)
     threading.Thread(target=watchdog, args=(srv,), daemon=True).start()
+    threading.Thread(target=first_run_shortcuts, daemon=True).start()
     if "--no-window" not in sys.argv:
         open_window(url)
     else:

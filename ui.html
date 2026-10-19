@@ -154,6 +154,56 @@ code { background: var(--accentsoft); color: var(--accent); padding: 0 5px; bord
 .list .item.click:hover { background: var(--accentsoft); }
 .list h2 { font-size: 14px; margin: 0 0 6px; }
 
+/* 캠페인 · 장부 */
+nav .badge { margin-left: auto; background: var(--bad); color: #fff; border-radius: 999px; font-size: 11px; padding: 0 7px; line-height: 18px; font-weight: bold; }
+.form .fgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 12px; }
+@media (max-width: 900px) { .form .fgrid { grid-template-columns: 1fr 1fr; } }
+.form .fgrid label { font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+.form .fgrid label[hidden] { display: none; }
+select, input[type=date], input[type=number] { border: 1.5px solid var(--line); border-radius: var(--r-sm); padding: 8px 10px; font: inherit; background: var(--solid); color: var(--text); outline: none; }
+select:focus, input[type=date]:focus, input[type=number]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accentsoft); }
+.kw { display: flex; gap: 6px; margin-bottom: 6px; align-items: center; }
+.kw input[type=text] { flex: 1; }
+.kw input.n { width: 70px; flex: none; }
+.chipsel label { display: flex; gap: 6px; align-items: center; padding: 5px 11px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--solid); cursor: pointer; font-size: 13px; }
+.chipsel label:has(input:checked) { border-color: var(--pc); background: color-mix(in srgb, var(--pc) 10%, var(--solid)); font-weight: bold; }
+.chipsel input { display: none; }
+.chipsel .pi { width: 20px; height: 20px; font-size: 10px; border-radius: 6px; }
+button.danger:hover:not(:disabled) { border-color: var(--bad); color: var(--bad); }
+.grow { flex: 1; }
+.filt { margin: 0 0 10px; gap: 4px; }
+.filt button { border: 0; background: none; color: var(--muted); padding: 5px 12px; border-radius: 999px; font: inherit; font-size: 13px; cursor: pointer; }
+.filt button.on { background: var(--solid); color: var(--accent); font-weight: bold; box-shadow: var(--shadow); }
+.camp { display: flex; gap: 12px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; margin-bottom: 8px; box-shadow: var(--shadow); }
+.camp.done { opacity: .6; }
+.camp .main-c { flex: 1; min-width: 0; }
+.camp .main-c b { font-size: 14.5px; }
+.camp .sub { font-size: 12px; color: var(--muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dday { flex: none; width: 58px; text-align: center; border-radius: 12px; padding: 6px 0; font-weight: bold; font-size: 14px; background: var(--accentsoft); color: var(--accent); }
+.dday small { display: block; font-size: 10.5px; font-weight: normal; opacity: .8; }
+.dday.soon { background: var(--warnsoft); color: var(--warn); }
+.dday.late { background: var(--badsoft); color: var(--bad); }
+.dday.done { background: var(--soft); color: var(--muted); }
+.kind { font-size: 11px; border-radius: 8px; padding: 1px 7px; font-weight: bold; margin-right: 4px; background: var(--accentsoft); color: var(--accent); }
+.kind.groupbuy { background: color-mix(in srgb, var(--accent2) 18%, var(--solid)); color: light-dark(#c2508a, #f2a3c8); }
+.kind.sponsor { background: color-mix(in srgb, var(--ok) 15%, var(--solid)); color: var(--ok); }
+.campbar { display: flex; gap: 10px; align-items: center; background: linear-gradient(90deg, var(--accentsoft), color-mix(in srgb, var(--accent2) 14%, var(--solid))); border: 1px solid var(--line);
+  border-radius: var(--r); padding: 10px 14px; margin-bottom: 14px; font-size: 13px; }
+.campbar .grow { flex: 1; }
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 14px; }
+@media (max-width: 900px) { .tiles { grid-template-columns: 1fr 1fr; } }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; box-shadow: var(--shadow); }
+.tile small { color: var(--muted); font-size: 12px; }
+.tile b { display: block; font-size: 20px; letter-spacing: -.5px; margin-top: 2px; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl th { text-align: left; color: var(--muted); font-weight: normal; font-size: 12px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.tbl td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.tbl tr:last-child td { border-bottom: 0; }
+.tbl td.num, .tbl th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.tbl tbody tr.click { cursor: pointer; }
+.tbl tbody tr.click:hover td { background: var(--accentsoft); }
+.tbl a { color: var(--accent); }
+
 /* 도움말 */
 .helpgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 @media (max-width: 860px) { .helpgrid { grid-template-columns: 1fr; } }
@@ -195,6 +245,8 @@ code { background: var(--accentsoft); color: var(--accent); padding: 0 5px; bord
   <button data-tab="write" class="on">✍️ 쓰기</button>
   <button data-tab="voice">🗣️ 내 말투</button>
   <button data-tab="posts">📂 지난 글</button>
+  <button data-tab="camps">🎁 캠페인 <span class="badge" id="dueBadge" hidden></span></button>
+  <button data-tab="ledger">📒 장부</button>
   <button data-tab="help">❓ 도움말</button>
   <div class="grow"></div>
   <div class="claude" id="claude">확인 중…</div>
@@ -205,6 +257,7 @@ code { background: var(--accentsoft); color: var(--accent); padding: 0 5px; bord
       <div><h1 id="postName">새 글</h1><p>사진과 메모만 주세요. 플랫폼에 맞춰 내 말투로 써 드려요. <span class="helplink" data-go="help">처음이세요?</span></p></div>
       <button class="btn" id="newPost">＋ 새 글</button>
     </div>
+    <div class="campbar" id="campBar" hidden></div>
     <div class="box">
       <div class="grid2">
         <div>
@@ -257,6 +310,64 @@ code { background: var(--accentsoft); color: var(--accent); padding: 0 5px; bord
   <section id="posts">
     <div class="head"><div><h1>지난 글</h1><p>눌러서 열면 이어서 다듬을 수 있어요.</p></div></div>
     <div class="box list" id="postList"></div>
+  </section>
+
+  <section id="camps">
+    <div class="head"><div><h1>체험단 · 협찬 · 공구</h1><p>조건을 적어 두면 글에 자동으로 들어가고, 빠진 건 짚어 드려요. 협찬 표기도 알아서 넣어요.</p></div>
+      <button class="btn main" id="campNew">＋ 새 캠페인</button></div>
+    <div class="box form" id="campForm" hidden>
+      <div class="fgrid">
+        <label>종류<select id="cKind"><option value="experience">체험단</option><option value="sponsor">협찬</option><option value="groupbuy">공구</option></select></label>
+        <label>업체·브랜드 *<input type="text" id="cBrand" placeholder="예) OO식당"></label>
+        <label>캠페인 이름<input type="text" id="cTitle" placeholder="예) 10월 신메뉴 체험단"></label>
+        <label class="gb">공구 시작일<input type="date" id="cStart"></label>
+        <label>마감일(글 올릴 기한 · 공구 마감)<input type="date" id="cDeadline"></label>
+        <label>제공받은 것<input type="text" id="cProvided" placeholder="예) 2인 식사권 · 제품 1개"></label>
+        <label class="gb">정가<input type="text" id="cPrice" placeholder="39,000원"></label>
+        <label class="gb">공구가<input type="text" id="cSale" placeholder="29,000원"></label>
+        <label class="gb">수수료율(%)<input type="text" id="cRate" placeholder="10"></label>
+      </div>
+      <label class="small">올릴 곳</label>
+      <div class="row chipsel" id="cPlats"></div>
+      <label class="small">필수 키워드 — 본문에 몇 번 이상 들어가야 하는지</label>
+      <div id="cKws"></div>
+      <button class="btn" id="cKwAdd" style="margin-top:6px">＋ 키워드</button>
+      <label class="small">필수 해시태그</label>
+      <input type="text" id="cTags" placeholder="#OO식당 #을지로맛집">
+      <label class="small">필수 링크 (한 줄에 하나 — 지도·구매 링크 등)</label>
+      <textarea id="cLinks" rows="2" placeholder="https://..."></textarea>
+      <label class="small">업체 요구사항 (그대로 AI 에게 전달돼요)</label>
+      <textarea id="cNotes" rows="3" placeholder="예) 주차 정보 꼭 넣기, 사진 15장 이상, 동영상 1개"></textarea>
+      <div class="row" style="margin-top:12px"><button class="btn main" id="cSave">저장</button><button class="btn" id="cCancel">취소</button>
+        <span class="grow"></span><button class="btn danger" id="cDel" hidden>삭제</button></div>
+    </div>
+    <div class="row filt" id="campFilt"><button data-f="open" class="on">진행 중</button><button data-f="done">완료</button><button data-f="all">전체</button></div>
+    <div id="campList"></div>
+  </section>
+
+  <section id="ledger">
+    <div class="head"><div><h1>장부</h1><p>어디에 올려서 무엇을 받았는지 적어 두세요. 다음 해 5월 종합소득세 신고 때 필요해요.</p></div>
+      <div class="row"><select id="lYear"></select><button class="btn" id="lCsv">⬇ 엑셀(CSV)</button><button class="btn main" id="lNew">＋ 기록</button></div></div>
+    <div class="tiles" id="lTiles"></div>
+    <div class="box form" id="lForm" hidden>
+      <div class="fgrid">
+        <label>날짜<input type="date" id="lDate"></label>
+        <label>종류<select id="lKind"><option>원고료</option><option>협찬 물품</option><option>공구 수수료</option><option>광고 수익</option><option>제휴 수익</option><option>기타</option></select></label>
+        <label>플랫폼<select id="lPlat"></select></label>
+        <label>업체·내용 *<input type="text" id="lWhat" placeholder="예) OO식당 체험단"></label>
+        <label>받은 돈(원)<input type="text" id="lAmount" inputmode="numeric" placeholder="0"></label>
+        <label>물품 가액(원)<input type="text" id="lValue" inputmode="numeric" placeholder="식사권·제품의 시가"></label>
+      </div>
+      <label class="small">글 주소</label>
+      <input type="text" id="lUrl" placeholder="https://blog.naver.com/...">
+      <label class="small">메모</label>
+      <input type="text" id="lMemo">
+      <div class="row" style="margin-top:12px"><button class="btn main" id="lSave">저장</button><button class="btn" id="lCancel">취소</button>
+        <span class="grow"></span><button class="btn danger" id="lDel" hidden>삭제</button></div>
+    </div>
+    <div class="box"><table class="tbl" id="lTable"></table></div>
+    <div class="box"><h2 style="font-size:14px;margin:0 0 6px">월별</h2><table class="tbl" id="lMonth"></table></div>
+    <p class="hint">협찬으로 받은 물품·식사권도 소득으로 볼 수 있어요. 무엇을 어떻게 신고할지는 홈택스나 세무사에게 확인하세요 — 이 장부는 기록용이에요.</p>
   </section>
 
   <section id="help">
@@ -319,6 +430,16 @@ code { background: var(--accentsoft); color: var(--accent); padding: 0 5px; bord
         </ul>
         <p class="hint">다듬기는 바로 전 글을 기억하고 있어서 "방금 거에서 ~만" 이 통해요.</p>
       </div>
+      <div class="box wide">
+        <h2><span class="e">🎁</span>체험단 · 협찬 · 공구 · 장부</h2>
+        <ol>
+          <li><b>🎁 캠페인</b>에서 「＋ 새 캠페인」 — 업체, 마감일, 필수 키워드(몇 번 이상), 필수 태그·링크, 요구사항을 적어요. 공구면 기간·정가·공구가도.</li>
+          <li>「✍️ 글 쓰기」 — 조건이 글에 자동으로 들어가고, <b>협찬 표기 문장</b>도 알아서 맨 앞(블로그는 제목 다음)에 넣어요. 빠진 키워드·태그·링크는 노란 상자로 짚어 줘요.</li>
+          <li>마감 3일 전부터 왼쪽 <b>🎁 캠페인</b>에 빨간 숫자가 떠요.</li>
+          <li>올리고 나면 「✅ 완료」 → <b>📒 장부</b>에 받은 돈·물품 가액·글 주소를 적어요. 연도별 합계와 월별 표가 나오고, 「⬇ 엑셀(CSV)」로 받아 둘 수 있어요.</li>
+        </ol>
+        <p class="hint">협찬 물품·식사권도 소득으로 볼 수 있어요. 신고는 홈택스나 세무사에게 확인하세요.</p>
+      </div>
       <div class="box faq wide">
         <h2><span class="e">🙋</span>자주 묻는 질문</h2>
         <details><summary>왜 자동으로 올려 주지 않나요?</summary><p>네이버는 자동 프로그램으로 글을 올리는 걸 약관으로 막고 있어서, 걸리면 저품질 처리나 계정 정지가 될 수 있어요. 그래서 글 만들기까지만 하고 올리기는 직접 해요.</p></details>
@@ -359,6 +480,8 @@ document.querySelectorAll("nav button[data-tab]").forEach(b => b.onclick = () =>
   document.querySelectorAll("nav button[data-tab]").forEach(x => x.classList.toggle("on", x === b));
   document.querySelectorAll("section").forEach(s => s.classList.toggle("on", s.id === b.dataset.tab));
   if (b.dataset.tab === "posts") loadPosts();
+  if (b.dataset.tab === "camps") loadCamps();
+  if (b.dataset.tab === "ledger") loadLedger();
   main.scrollTop = 0;
 });
 const main = document.querySelector("main");
@@ -429,10 +552,12 @@ function movePhoto(from, before) {
 async function ensurePost() {
   const memo = $("#memo").value, title = $("#title").value;
   if (!S.name) {
-    S.name = (await api("/api/post/new", { memo, title })).name;
+    S.name = (await api("/api/post/new", { memo, title, campaign: S.campaign || "" })).name;
     $("#postName").textContent = S.name;
+    const c = camp(S.campaign);
+    if (c) api("/api/items/save", { kind: "campaigns", item: Object.assign({}, c, { post: S.name }) }).then(loadCampsQuiet).catch(() => {});
   } else {
-    await api("/api/post/save", { name: S.name, memo, title });
+    await api("/api/post/save", { name: S.name, memo, title, campaign: S.campaign || "" });
   }
 }
 
@@ -496,10 +621,13 @@ function showBlank() {
 
 $("#newPost").onclick = () => {
   if (Object.values(S.busy).some(Boolean)) return toast("글을 만드는 중이에요. 끝난 뒤에 새 글을 여세요.");
-  S.name = ""; S.photos = []; S.texts = {};
-  $("#memo").value = ""; $("#title").value = ""; $("#postName").textContent = "새 글";
-  renderPhotos(); $("#cards").innerHTML = ""; showBlank();
+  newPost();
 };
+function newPost(campaign) {
+  S.name = ""; S.photos = []; S.texts = {}; S.campaign = campaign || "";
+  $("#memo").value = ""; $("#title").value = ""; $("#postName").textContent = "새 글";
+  renderPhotos(); $("#cards").innerHTML = ""; showBlank(); renderCampBar();
+}
 
 $("#go").onclick = () => generate(false);
 $("#goNew").onclick = () => generate(true);
@@ -592,10 +720,21 @@ function card(p, status, error) {
 // 뻔한 표현 — prompts\base.md 의 금지 목록과 같게 둔다
 const CLICHE = ["알아보겠습니다", "소개해드릴게요", "소개해 드릴게요", "다녀왔습니다~", "완전 강추", "인생 맛집", "가성비 갑", "분위기 맛집",
   "재방문 의사", "강력 추천", "결론적으로", "마무리하며", "총평", "한 줄 요약", "찾아올게요", "공감과 댓글", "도움이 되셨길", "도움이 되셨으면"];
-function lint(text) {
+function lint(text, p) {
   const out = [];
   const t = text || "";
   if (/\[확인:/.test(t)) out.push("<b>[확인: …]</b> 자리는 AI 가 모르는 정보예요. 직접 채워 주세요.");
+  const c = camp(S.campaign);
+  if (c && t.trim()) {                                   // 캠페인 조건 점검
+    const low = t.toLowerCase(), miss = [];
+    (c.keywords || []).filter(k => (k.word || "").trim()).forEach(k => {
+      const n = low.split(k.word.trim().toLowerCase()).length - 1, need = +k.min || 1;
+      if (n < need) miss.push(`키워드 <b>${esc(k.word)}</b> ${n}/${need}번`);
+    });
+    if (p && plat(p).hashtags) tagList(c.tags).filter(x => !low.includes(x.toLowerCase())).forEach(x => miss.push("태그 <b>" + esc(x) + "</b>"));
+    linkList(c.links).filter(u => !t.includes(u)).forEach(u => miss.push("링크 <b>" + esc(u.slice(0, 40)) + "</b>"));
+    if (miss.length) out.push("🎁 캠페인 조건이 빠졌어요: " + miss.join(" · "));
+  }
   const hit = CLICHE.filter(w => t.includes(w));
   if (hit.length) out.push("뻔한 표현: " + hit.map(w => "<b>" + esc(w) + "</b>").join(", ") + " — 내 말로 바꾸면 좋아요.");
   // 본문 문장만(해시태그·[사진]·소제목·머리말 줄 빼고)
@@ -620,7 +759,7 @@ function lint(text) {
   return out;
 }
 function showLint(c, text) {
-  const st = c.querySelector(".st"), w = lint(text);
+  const st = c.querySelector(".st"), w = lint(text, c.id.replace(/^card-/, ""));
   st.className = "st" + (w.length ? " warn" : "");
   st.innerHTML = w.length ? "⚠️ " + w.join("<br>⚠️ ") : "";
 }
@@ -704,16 +843,232 @@ async function openPost(name) {
   if (Object.values(S.busy).some(Boolean)) return toast("글을 만드는 중이에요. 끝난 뒤에 여세요.");
   try {
     const d = await api("/api/post?name=" + encodeURIComponent(name));
-    S.name = d.name; S.photos = d.photos; S.texts = d.texts;
+    S.name = d.name; S.photos = d.photos; S.texts = d.texts; S.campaign = d.campaign || "";
     $("#memo").value = d.memo; $("#title").value = d.title; $("#postName").textContent = d.name;
-    renderPhotos(); $("#cards").innerHTML = "";
+    renderPhotos(); $("#cards").innerHTML = ""; renderCampBar();
     Object.keys(d.texts).forEach(p => card(p, "done"));
     showBlank();
     document.querySelector('nav button[data-tab="write"]').click();
   } catch (e) { fail(e); }
 }
 
-loadState().catch(fail);
+// ---------- 캠페인(체험단·협찬·공구) ----------
+const KIND = { experience: "체험단", sponsor: "협찬", groupbuy: "공구" };
+S.camps = []; S.campaign = ""; S.campFilter = "open";
+const camp = id => id ? S.camps.find(c => c.id === id) : null;
+const tagList = s => [...new Set((s || "").split(/[\s,]+/).map(w => w.replace(/^#+/, "").trim()).filter(Boolean).map(w => "#" + w))];
+const linkList = a => (a || []).map(u => (u || "").trim()).filter(Boolean);
+const today = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+function dday(c) {
+  if (c.status === "done") return { t: "완료", cls: "done" };
+  if (!c.deadline) return { t: "-", cls: "" };
+  const n = Math.round((new Date(c.deadline) - new Date(today())) / 86400000);
+  return { t: n === 0 ? "D-day" : n > 0 ? "D-" + n : "D+" + (-n), cls: n < 0 ? "late" : n <= 3 ? "soon" : "", n };
+}
+async function loadCampsQuiet() {
+  S.camps = await api("/api/items?kind=campaigns").catch(() => S.camps);
+  const due = S.camps.filter(c => c.status !== "done" && c.deadline && dday(c).n <= 3);
+  $("#dueBadge").hidden = !due.length; $("#dueBadge").textContent = due.length;
+  return due;
+}
+async function loadCamps() { await loadCampsQuiet(); renderCamps(); }
+
+function renderCamps() {
+  const f = S.campFilter;
+  const rows = S.camps.filter(c => f === "all" || (f === "done" ? c.status === "done" : c.status !== "done"))
+    .sort((a, b) => (a.status === "done") - (b.status === "done") || (a.deadline || "9999").localeCompare(b.deadline || "9999"));
+  $("#campList").innerHTML = rows.length ? rows.map(c => {
+    const d = dday(c);
+    const sub = [c.provided && "🎁 " + c.provided, c.kind === "groupbuy" && c.sale_price && "💰 " + (c.price ? c.price + " → " : "") + c.sale_price,
+      (c.keywords || []).filter(k => k.word).map(k => "🔑 " + k.word + "×" + (k.min || 1)).join(" "), c.deadline && "⏰ " + c.deadline].filter(Boolean).join(" · ");
+    return `<div class="camp ${c.status === "done" ? "done" : ""}" data-id="${esc(c.id)}">
+      <div class="dday ${d.cls}">${esc(d.t)}<small>${esc(KIND[c.kind] || "")}</small></div>
+      <div class="main-c"><span class="kind ${esc(c.kind)}">${esc(KIND[c.kind] || "")}</span><b>${esc(c.brand)}</b> ${c.title ? "· " + esc(c.title) : ""}
+        <div class="sub">${esc(sub) || "조건 없음"}</div></div>
+      <span class="dots">${(c.platforms || []).map(picon).join("")}</span>
+      <button class="btn main" data-act="write">${c.post ? "✍️ 글 열기" : "✍️ 글 쓰기"}</button>
+      <button class="btn" data-act="edit">고치기</button>
+      ${c.status === "done" ? '<button class="btn" data-act="reopen">되돌리기</button>' : '<button class="btn" data-act="done">✅ 완료</button>'}</div>`;
+  }).join("") : `<div class="blank"><span class="e">🎁</span>${f === "done" ? "완료한 캠페인이 없어요." : "진행 중인 캠페인이 없어요. 「＋ 새 캠페인」으로 추가하세요."}</div>`;
+  $("#campList").querySelectorAll("[data-act]").forEach(b => b.onclick = () => campAct(b.closest(".camp").dataset.id, b.dataset.act));
+}
+$("#campFilt").querySelectorAll("button").forEach(b => b.onclick = () => {
+  S.campFilter = b.dataset.f; $("#campFilt").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); renderCamps();
+});
+
+async function campAct(id, act) {
+  const c = camp(id);
+  if (!c) return;
+  if (act === "edit") return campEdit(c);
+  if (act === "write") {
+    if (Object.values(S.busy).some(Boolean)) return toast("글을 만드는 중이에요. 끝난 뒤에 해 주세요.");
+    if (c.post) {
+      const posts = await api("/api/posts").catch(() => []);
+      if (posts.some(p => p.name === c.post)) return openPost(c.post);
+    }
+    newPost(c.id);
+    document.querySelectorAll("#plats input").forEach(i => i.checked = (c.platforms || []).length ? c.platforms.includes(i.value) : i.checked);
+    goTab("write");
+    $("#memo").focus();
+    return toast("조건은 자동으로 들어가요. 메모엔 직접 겪은 것만 적어 주세요.");
+  }
+  if (act === "done" || act === "reopen") {
+    await api("/api/items/save", { kind: "campaigns", item: Object.assign({}, c, { status: act === "done" ? "done" : "open" }) }).catch(fail);
+    await loadCamps();
+    if (act === "done") {
+      goTab("ledger");
+      ledgerEdit({ date: today(), kind: c.kind === "groupbuy" ? "공구 수수료" : "협찬 물품", platform: (c.platforms || [])[0] || "",
+        what: c.brand + (c.title ? " · " + c.title : "") + ((c.title || "").includes(KIND[c.kind]) ? "" : " " + (KIND[c.kind] || "")), memo: c.provided || "", campaign: c.id });
+      toast("완료했어요. 받은 것을 장부에 적어 두세요.");
+    }
+  }
+}
+
+function kwRow(k) {
+  const r = document.createElement("div");
+  r.className = "kw";
+  r.innerHTML = `<input type="text" class="w" placeholder="예) 을지로 김치찌개" value="${esc(k?.word || "")}"><input type="number" class="n" min="1" value="${esc(k?.min || 1)}" title="최소 횟수"><span class="hint">번 이상</span><button class="btn">✕</button>`;
+  r.querySelector("button").onclick = () => r.remove();
+  $("#cKws").appendChild(r);
+}
+function campEdit(c) {
+  c = c || { kind: "experience", platforms: ["naver_blog"], keywords: [] };
+  S.editCamp = c.id || "";
+  $("#cKind").value = c.kind || "experience";
+  [["cBrand", "brand"], ["cTitle", "title"], ["cStart", "start"], ["cDeadline", "deadline"], ["cProvided", "provided"], ["cPrice", "price"],
+   ["cSale", "sale_price"], ["cRate", "rate"], ["cTags", "tags"], ["cNotes", "notes"]].forEach(([id, k]) => $("#" + id).value = c[k] || "");
+  $("#cLinks").value = (c.links || []).join("\n");
+  $("#cPlats").innerHTML = S.platforms.map(p => `<label style="${pc(p.id)}"><input type="checkbox" value="${esc(p.id)}" ${(c.platforms || []).includes(p.id) ? "checked" : ""}>${picon(p.id)}${esc(p.name)}</label>`).join("");
+  $("#cKws").innerHTML = "";
+  (c.keywords && c.keywords.length ? c.keywords : [null]).forEach(kwRow);
+  $("#cDel").hidden = !c.id;
+  kindView();
+  $("#campForm").hidden = false;
+  $("#cBrand").focus();
+}
+function kindView() { document.querySelectorAll("#campForm .gb").forEach(e => e.hidden = $("#cKind").value !== "groupbuy"); }
+$("#cKind").onchange = kindView;
+$("#campNew").onclick = () => campEdit(null);
+$("#cKwAdd").onclick = () => kwRow(null);
+$("#cCancel").onclick = () => $("#campForm").hidden = true;
+$("#cSave").onclick = async () => {
+  const brand = $("#cBrand").value.trim();
+  if (!brand) return toast("업체·브랜드 이름을 적어 주세요.");
+  const old = camp(S.editCamp) || {};
+  const item = Object.assign({}, old, {
+    kind: $("#cKind").value, brand, title: $("#cTitle").value.trim(), start: $("#cStart").value, deadline: $("#cDeadline").value,
+    provided: $("#cProvided").value.trim(), price: $("#cPrice").value.trim(), sale_price: $("#cSale").value.trim(), rate: $("#cRate").value.trim(),
+    platforms: [...document.querySelectorAll("#cPlats input:checked")].map(i => i.value),
+    keywords: [...document.querySelectorAll("#cKws .kw")].map(r => ({ word: r.querySelector(".w").value.trim(), min: +r.querySelector(".n").value || 1 })).filter(k => k.word),
+    tags: $("#cTags").value.trim(), links: $("#cLinks").value.split("\n").map(s => s.trim()).filter(Boolean), notes: $("#cNotes").value.trim(),
+    status: old.status || "open" });
+  if (item.links.some(u => !/^https?:\/\//.test(u))) return toast("링크는 http:// 나 https:// 로 시작해야 해요.");
+  try {
+    await api("/api/items/save", { kind: "campaigns", item });
+    $("#campForm").hidden = true; toast("저장했어요."); loadCamps(); renderCampBar();
+  } catch (e) { fail(e); }
+};
+$("#cDel").onclick = async () => {
+  if (!confirm("이 캠페인을 지울까요? (만든 글은 남아요)")) return;
+  await api("/api/items/delete", { kind: "campaigns", id: S.editCamp }).catch(fail);
+  $("#campForm").hidden = true; loadCamps();
+};
+
+function renderCampBar() {
+  const c = camp(S.campaign), bar = $("#campBar");
+  bar.hidden = !c;
+  if (!c) return;
+  const d = dday(c);
+  const conds = [(c.keywords || []).map(k => "🔑 " + k.word + "×" + (k.min || 1)).join(" "), tagList(c.tags).join(" "), linkList(c.links).length && "🔗 링크 " + linkList(c.links).length + "개"].filter(Boolean).join(" · ");
+  bar.innerHTML = `<span class="kind ${esc(c.kind)}">${esc(KIND[c.kind])}</span><b>${esc(c.brand)}</b><span class="hint">${esc(conds || "조건 없음")} · 협찬 표기는 자동</span>
+    <span class="grow"></span><span class="dday ${d.cls}" style="width:auto;padding:3px 10px;font-size:12px">${esc(d.t)}</span>
+    <button class="btn" id="campUnlink" title="이 글을 캠페인과 떼어 놓아요">연결 끊기</button>`;
+  $("#campUnlink").onclick = () => {
+    if (!confirm("이 글을 캠페인과 떼어 놓을까요? 다음에 만드는 글부터 조건이 빠져요.")) return;
+    S.campaign = "";
+    if (S.name) api("/api/post/save", { name: S.name, memo: $("#memo").value, title: $("#title").value, campaign: "" }).catch(fail);
+    renderCampBar();
+  };
+}
+
+// ---------- 장부 ----------
+S.ledger = []; S.year = String(new Date().getFullYear());
+const won = n => (Math.round(+n || 0)).toLocaleString("ko-KR") + "원";
+const num = s => +String(s || "").replace(/[^\d.-]/g, "") || 0;
+async function loadLedger() {
+  S.ledger = await api("/api/items?kind=ledger").catch(e => { fail(e); return []; });
+  const years = [...new Set(S.ledger.map(r => (r.date || "").slice(0, 4)).filter(Boolean).concat([String(new Date().getFullYear())]))].sort().reverse();
+  if (!years.includes(S.year)) S.year = years[0];
+  $("#lYear").innerHTML = years.map(y => `<option ${y === S.year ? "selected" : ""}>${y}</option>`).join("");
+  renderLedger();
+}
+$("#lYear").onchange = () => { S.year = $("#lYear").value; renderLedger(); };
+function yearRows() { return S.ledger.filter(r => (r.date || "").startsWith(S.year)).sort((a, b) => (b.date || "").localeCompare(a.date || "")); }
+function renderLedger() {
+  const rows = yearRows();
+  const cash = rows.reduce((a, r) => a + num(r.amount), 0), goods = rows.reduce((a, r) => a + num(r.value), 0);
+  $("#lTiles").innerHTML = [["받은 돈", won(cash)], ["물품 가액", won(goods)], ["합계", won(cash + goods)], ["건수", rows.length + "건"]]
+    .map(([k, v]) => `<div class="tile"><small>${S.year}년 ${k}</small><b>${v}</b></div>`).join("");
+  $("#lTable").innerHTML = rows.length ? `<thead><tr><th>날짜</th><th>종류</th><th>플랫폼</th><th>업체·내용</th><th>글</th><th class="num">받은 돈</th><th class="num">물품 가액</th></tr></thead><tbody>` +
+    rows.map(r => `<tr class="click" data-id="${esc(r.id)}"><td>${esc(r.date)}</td><td>${esc(r.kind)}</td><td>${r.platform ? picon(r.platform) : ""}</td><td>${esc(r.what)}</td>
+      <td>${r.url ? `<a href="#" data-url="${esc(r.url)}">열기</a>` : ""}</td><td class="num">${num(r.amount) ? won(r.amount) : ""}</td><td class="num">${num(r.value) ? won(r.value) : ""}</td></tr>`).join("") + "</tbody>"
+    : `<tr><td><div class="blank" style="border:0"><span class="e">📒</span>${S.year}년 기록이 없어요. 캠페인을 「완료」하면 여기에 적을 수 있어요.</div></td></tr>`;
+  $("#lTable").querySelectorAll("tr[data-id]").forEach(tr => tr.onclick = e => {
+    if (e.target.dataset.url) { e.preventDefault(); return window.open(e.target.dataset.url, "_blank"); }
+    ledgerEdit(S.ledger.find(r => r.id === tr.dataset.id));
+  });
+  const months = {};
+  rows.forEach(r => { const m = (r.date || "").slice(5, 7); (months[m] = months[m] || { n: 0, cash: 0, goods: 0 }); months[m].n++; months[m].cash += num(r.amount); months[m].goods += num(r.value); });
+  const ms = Object.keys(months).sort();
+  $("#lMonth").innerHTML = ms.length ? `<thead><tr><th>월</th><th class="num">건수</th><th class="num">받은 돈</th><th class="num">물품 가액</th><th class="num">합계</th></tr></thead><tbody>` +
+    ms.map(m => `<tr><td>${+m}월</td><td class="num">${months[m].n}</td><td class="num">${won(months[m].cash)}</td><td class="num">${won(months[m].goods)}</td><td class="num"><b>${won(months[m].cash + months[m].goods)}</b></td></tr>`).join("") + "</tbody>"
+    : `<tr><td class="hint">아직 없어요.</td></tr>`;
+}
+function ledgerEdit(r) {
+  r = r || { date: today(), kind: "원고료" };
+  S.editLedger = r;
+  $("#lPlat").innerHTML = '<option value="">-</option>' + S.platforms.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("") + '<option value="etc">기타</option>';
+  $("#lDate").value = r.date || today(); $("#lKind").value = r.kind || "원고료"; $("#lPlat").value = r.platform || "";
+  $("#lWhat").value = r.what || ""; $("#lAmount").value = r.amount || ""; $("#lValue").value = r.value || ""; $("#lUrl").value = r.url || ""; $("#lMemo").value = r.memo || "";
+  $("#lDel").hidden = !r.id;
+  $("#lForm").hidden = false;
+  $("#lWhat").focus();
+}
+$("#lNew").onclick = () => ledgerEdit(null);
+$("#lCancel").onclick = () => $("#lForm").hidden = true;
+$("#lSave").onclick = async () => {
+  const what = $("#lWhat").value.trim();
+  if (!what) return toast("업체·내용을 적어 주세요.");
+  const url = $("#lUrl").value.trim();
+  if (url && !/^https?:\/\//.test(url)) return toast("글 주소는 http:// 나 https:// 로 시작해야 해요.");
+  const item = Object.assign({}, S.editLedger, { date: $("#lDate").value || today(), kind: $("#lKind").value, platform: $("#lPlat").value, what,
+    amount: num($("#lAmount").value), value: num($("#lValue").value), url, memo: $("#lMemo").value.trim() });
+  try {
+    await api("/api/items/save", { kind: "ledger", item });
+    $("#lForm").hidden = true; S.year = item.date.slice(0, 4); toast("적었어요."); loadLedger();
+  } catch (e) { fail(e); }
+};
+$("#lDel").onclick = async () => {
+  if (!confirm("이 기록을 지울까요?")) return;
+  await api("/api/items/delete", { kind: "ledger", id: S.editLedger.id }).catch(fail);
+  $("#lForm").hidden = true; loadLedger();
+};
+$("#lCsv").onclick = () => {
+  const rows = yearRows().slice().reverse();
+  if (!rows.length) return toast(S.year + "년 기록이 없어요.");
+  const q = v => '"' + String(v ?? "").replace(/"/g, '""') + '"';
+  const lines = [["날짜", "종류", "플랫폼", "업체·내용", "받은 돈", "물품 가액", "합계", "글 주소", "메모"].map(q).join(",")]
+    .concat(rows.map(r => [r.date, r.kind, r.platform ? plat(r.platform).name || r.platform : "", r.what, num(r.amount), num(r.value), num(r.amount) + num(r.value), r.url, r.memo].map(q).join(",")));
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" }));     // BOM — 엑셀이 한글을 바로 읽게
+  a.download = "장부-" + S.year + ".csv";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+};
+
+loadState().then(loadCampsQuiet).then(due => {
+  if (due && due.length) toast("⏰ 마감이 다가온 캠페인이 " + due.length + "개 있어요 — 🎁 캠페인 탭을 보세요.");
+}).catch(fail);
 </script>
 </body>
 </html>

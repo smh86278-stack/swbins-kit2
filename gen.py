@@ -184,13 +184,101 @@ def ensure_tags(text, tags):
     return add(text)
 
 
-def build_prompt(platform, memo, title, photos, voice_texts, voice_note, fixed_tags=()):
+KINDS = {"experience": "체험단", "sponsor": "협찬", "groupbuy": "공구"}
+
+
+def josa(word, pair):
+    """받침 보고 조사 고르기 — pair 는 ('으로', '로') · ('을', '를') 처럼 (받침 있을 때, 없을 때)."""
+    ch = (word or "").strip()[-1:]
+    if not ("가" <= ch <= "힣"):
+        return pair[1]
+    jong = (ord(ch) - 0xAC00) % 28
+    if pair[0] == "으로" and jong == 8:          # ㄹ 받침은 '로'
+        return pair[1]
+    return pair[0] if jong else pair[1]
+
+
+def disclosure(campaign):
+    """협찬·공구 표기 한 줄 — 캠페인에 업체가 있으면(공정위 추천·보증 심사지침: 경제적 이해관계는 앞쪽에)."""
+    brand = (campaign or {}).get("brand", "").strip()
+    if not brand:
+        return ""
+    if campaign.get("kind") == "groupbuy":
+        return "이 글은 %s 공동구매 진행 글로, 판매에 따른 수수료를 받습니다." % brand
+    got = (campaign.get("provided") or "").strip() or "제품"
+    return "이 글은 %s%s부터 %s%s 제공받아 솔직하게 작성했습니다." % (brand, josa(brand, ("으로", "로")), got, josa(got, ("을", "를")))
+
+
+def ensure_disclosure(text, line, has_title):
+    """협찬 표기가 앞쪽에 없으면 넣는다 — 제목 있는 플랫폼은 제목 다음, 아니면 맨 앞."""
+    if not line or not text.strip():
+        return text
+    lines = text.strip().split("\n")
+    head = "\n".join(lines[:4])
+    if "제공받" in head or "협찬" in head or "광고" in head:
+        return text
+    if has_title and len(lines) > 1:
+        return "\n".join([lines[0], "", line] + lines[1:])
+    return line + "\n\n" + text.strip()
+
+
+def campaign_tags(campaign, platform):
+    return parse_tags((campaign or {}).get("tags", "")) if platform.get("hashtags") else []
+
+
+def campaign_block(campaign, platform):
+    """체험단·협찬 조건을 프롬프트로."""
+    if not campaign:
+        return ""
+    c = campaign
+    kind = KINDS.get(c.get("kind"), "협찬")
+    parts = ["## %s 조건 (꼭 지킨다)" % kind, "%s 글이다. 업체: %s" % (kind, c.get("brand") or "[확인: 업체]")]
+    if c.get("provided"):
+        parts.append("제공받은 것: " + c["provided"])
+    if c.get("kind") == "groupbuy":
+        gb = ["공동구매 안내도 함께 쓴다 — 아래 숫자·날짜는 한 글자도 바꾸지 않는다."]
+        if c.get("start") or c.get("deadline"):
+            gb.append("공구 기간: %s ~ %s" % (date_text(c.get("start", "")) or "[확인: 시작일]", date_text(c.get("deadline", "")) or "[확인: 마감일]"))
+        if c.get("price") or c.get("sale_price"):
+            gb.append("가격: 정가 %s → 공구가 %s" % (c.get("price") or "[확인: 정가]", c.get("sale_price") or "[확인: 공구가]"))
+        gb.append("직접 써 본 경험이 먼저고, 공구 안내(기간·가격·구매 링크)는 글 뒤쪽에 짧게 모은다. '마감 임박', '역대급' 같은 재촉 표현은 쓰지 않는다.")
+        parts.append("\n".join(gb))
+    line = disclosure(c)
+    if line:
+        parts.append("협찬 표기: %s첫 부분에 이 문장을 그대로 넣는다 — \"%s\"" % ("제목 다음 " if platform.get("title") else "", line))
+    for k in c.get("keywords") or []:
+        if (k.get("word") or "").strip():
+            parts.append("필수 키워드: \"%s\" 를 본문에 %d번 이상, 문장 속에 자연스럽게(나열하지 말 것)" % (k["word"].strip(), int(k.get("min") or 1)))
+    tags = campaign_tags(c, platform)
+    if tags:
+        parts.append("필수 해시태그(그대로): " + " ".join(tags))
+    links = [u for u in c.get("links") or [] if (u or "").strip()]
+    if links:
+        parts.append("필수 링크: 글 끝 해시태그 앞에 아래 주소를 한 줄씩 그대로 넣는다\n" + "\n".join(links))
+    if (c.get("notes") or "").strip():
+        parts.append("업체 요구사항:\n" + c["notes"].strip())
+    parts.append("조건 때문에 광고처럼 들뜨지 않게 한다. 좋은 점·아쉬운 점은 여전히 메모에 있는 대로만 쓴다.")
+    return "\n".join(parts)
+
+
+def apply_campaign(text, campaign, platform):
+    """AI 가 빠뜨려도 꼭 들어가야 하는 것 — 협찬 표기·필수 태그."""
+    if not campaign:
+        return text
+    text = ensure_disclosure(text, disclosure(campaign), platform.get("title"))
+    return ensure_tags(text, campaign_tags(campaign, platform))
+
+
+def build_prompt(platform, memo, title, photos, voice_texts, voice_note, fixed_tags=(), campaign=None):
     """플랫폼 하나에 쓸 글을 요청하는 프롬프트."""
     tags = "%d개 안팎" % platform["hashtags"] if platform.get("hashtags") else "쓰지 않음"
     if platform.get("hashtags") and fixed_tags:
         tags += " — 이 태그는 꼭 그대로 넣는다(개수에 포함): " + " ".join(fixed_tags)
     head = [read_prompt("base.md"), read_prompt(platform["prompt"]),
             "분량: %s · 해시태그: %s" % (platform.get("length", ""), tags)]
+    cb = campaign_block(campaign, platform)
+    if cb:
+        head.append(cb)
     vb = voice_block(voice_texts, voice_note)
     if vb:
         head.append(vb)
@@ -209,7 +297,7 @@ def build_prompt(platform, memo, title, photos, voice_texts, voice_note, fixed_t
     return "\n\n".join(head)
 
 
-def build_refine_prompt(platform, instruction, current, standalone=False, voice_texts=(), voice_note=""):
+def build_refine_prompt(platform, instruction, current, standalone=False, voice_texts=(), voice_note="", campaign=None):
     """다듬기. standalone 이면 앞 대화(세션)가 없을 때 — 공통 규칙과 말투를 다시 붙인다."""
     parts = []
     if standalone:
@@ -217,6 +305,9 @@ def build_refine_prompt(platform, instruction, current, standalone=False, voice_
         vb = voice_block(list(voice_texts), voice_note)
         if vb:
             parts.append(vb)
+    cb = campaign_block(campaign, platform)
+    if cb:
+        parts.append(cb + "\n(다듬어도 이 조건은 그대로 지킨다)")
     parts.append("아래는 지금 %s 글이다(글쓴이가 직접 고쳤을 수 있으니 이 글을 기준으로 한다).\n\n<지금 글>\n%s\n</지금 글>" % (platform["name"], current.strip()))
     parts.append("요청: " + instruction.strip())
     parts.append("요청한 부분만 바꾸고 나머지 규칙은 그대로 지킨다. 고친 글 본문 전체만 출력한다.")

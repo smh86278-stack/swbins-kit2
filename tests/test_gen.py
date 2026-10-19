@@ -47,6 +47,28 @@ class PromptTest(unittest.TestCase):
         self.assertEqual(tik, "[캡션]\n한 줄 #카페 #을지로\n\n[자막 대본]\n(사진 1) 첫 줄")
         self.assertEqual(gen.ensure_tags("본문 #을지로", ["#을지로"]), "본문 #을지로")
 
+    def test_campaign(self):
+        c = {"kind": "experience", "brand": "OO식당", "provided": "2인 식사권", "keywords": [{"word": "을지로 김치찌개", "min": 3}, {"word": "", "min": 1}],
+             "tags": "#OO식당 체험단", "links": ["https://map.naver.com/x"], "notes": "주차 정보 꼭"}
+        blog = dict(BLOG, title=True)
+        s = gen.build_prompt(blog, "m", "", [], [], "", campaign=c)
+        for w in ("을지로 김치찌개", "3번 이상", "#OO식당", "#체험단", "https://map.naver.com/x", "주차 정보 꼭", "2인 식사권", "제목 다음"):
+            self.assertIn(w, s)
+        line = gen.disclosure(c)
+        self.assertEqual(line, "이 글은 OO식당으로부터 2인 식사권을 제공받아 솔직하게 작성했습니다.")
+        self.assertEqual(gen.josa("카페", ("으로", "로")) + gen.josa("서울", ("으로", "로")) + gen.josa("커피", ("을", "를")) + gen.josa("ABC", ("을", "를")), "로로를를")
+        out = gen.apply_campaign("제목줄\n\n본문\n\n#맛집", c, blog)
+        self.assertEqual(out.split("\n")[:3], ["제목줄", "", line])
+        self.assertTrue(out.endswith("#맛집 #OO식당 #체험단"))
+        self.assertEqual(gen.ensure_disclosure("제목\n" + line + "\n본문", line, True), "제목\n" + line + "\n본문")   # 이미 있으면 그대로
+        self.assertTrue(gen.apply_campaign("본문", c, CAFE).startswith(line))     # 제목 없는 플랫폼은 맨 앞(CAFE 시험값엔 title 없음)
+        gb = {"kind": "groupbuy", "brand": "OO", "start": "2026-10-20", "deadline": "2026-10-25", "price": "39,000원", "sale_price": "29,000원"}
+        s = gen.build_prompt(BLOG, "m", "", [], [], "", campaign=gb)
+        self.assertIn("2026년 10월 25일", s)
+        self.assertIn("29,000원", s)
+        self.assertIn("수수료", gen.disclosure(gb))
+        self.assertEqual(gen.build_prompt(BLOG, "m", "", [], [], "").count("조건 (꼭"), 0)
+
     def test_photo_limit(self):
         names = ["%02d.jpg" % i for i in range(13)]
         s = gen.build_prompt(BLOG, "m", "", names, [], "")

@@ -35,6 +35,8 @@ LOCALDATA = os.path.join(os.environ.get("LOCALAPPDATA") or HERE, APP)
 POSTS = os.path.join(DATA, "posts")
 VOICE = os.path.join(DATA, "voice")
 CFG = os.path.join(DATA, "config.json")
+ITEMS = {"campaigns": os.path.join(DATA, "campaigns.json"),     # 체험단·협찬·공구
+         "ledger": os.path.join(DATA, "ledger.json")}           # 장부
 TOKEN = secrets.token_urlsafe(24)
 FROZEN = bool(getattr(sys, "frozen", False))      # PostKit.exe 로 돌고 있나
 NAME_RE = re.compile(r"^[^\\/:*?\"<>|\x00-\x1f]{1,120}$")
@@ -110,6 +112,42 @@ def post_path(name):
     return p
 
 
+def load_items(kind):
+    items = read_json(ITEMS[kind], [])
+    return items if isinstance(items, list) else []
+
+
+def save_item(kind, item):
+    """id 로 바꿔 끼우거나 새로 넣는다."""
+    if not isinstance(item, dict):
+        raise ValueError("내용이 올바르지 않습니다.")
+    with LOCK:
+        items = load_items(kind)
+        if not item.get("id"):
+            item["id"] = secrets.token_hex(5)
+            item["created"] = datetime.now().isoformat(timespec="seconds")
+            items.append(item)
+        else:
+            items = [item if x.get("id") == item["id"] else x for x in items]
+            if not any(x.get("id") == item["id"] for x in items):
+                items.append(item)
+        os.makedirs(DATA, exist_ok=True)
+        write_text(ITEMS[kind], json.dumps(items, ensure_ascii=False, indent=1))
+    return item
+
+
+def delete_item(kind, iid):
+    with LOCK:
+        items = [x for x in load_items(kind) if x.get("id") != iid]
+        write_text(ITEMS[kind], json.dumps(items, ensure_ascii=False, indent=1))
+
+
+def campaign_for(post_dir):
+    """글에 이어진 캠페인(없으면 None)."""
+    cid = read_text(os.path.join(post_dir, "campaign.txt")).strip()
+    return next((c for c in load_items("campaigns") if c.get("id") == cid), None) if cid else None
+
+
 def history(post_dir, pid):
     rows = []
     for line in read_text(os.path.join(post_dir, pid + ".history.jsonl")).splitlines():
@@ -136,6 +174,7 @@ def post_info(post_dir):
             texts[p["id"]] = t
     return {"name": name, "memo": read_text(os.path.join(post_dir, "memo.txt")),
             "title": read_text(os.path.join(post_dir, "title.txt")),
+            "campaign": read_text(os.path.join(post_dir, "campaign.txt")).strip(),
             "photos": gen.photo_names(post_dir), "texts": texts}
 
 
@@ -149,6 +188,7 @@ def list_posts():
             continue
         memo = read_text(os.path.join(d, "memo.txt")).strip()
         out.append({"name": n, "memo": memo.splitlines()[0][:60] if memo else "",
+                    "campaign": read_text(os.path.join(d, "campaign.txt")).strip(),
                     "platforms": [p["id"] for p in platforms() if os.path.isfile(os.path.join(d, p["id"] + ".md"))],
                     "photos": len(gen.photo_names(d))})
     return out
@@ -165,10 +205,11 @@ def gen_one(job, post_dir, plat, cfg):
     memo = read_text(os.path.join(post_dir, "memo.txt"))
     title = read_text(os.path.join(post_dir, "title.txt"))
     tags = fixed_tags(plat, cfg)
-    prompt = gen.build_prompt(plat, memo, title, gen.photo_names(post_dir), gen.load_voice(VOICE), cfg["voice_note"], tags)
+    camp = campaign_for(post_dir)
+    prompt = gen.build_prompt(plat, memo, title, gen.photo_names(post_dir), gen.load_voice(VOICE), cfg["voice_note"], tags, camp)
     r = gen.run(prompt, post_dir)
     if r["text"]:
-        r["text"] = gen.ensure_tags(r["text"], tags)
+        r["text"] = gen.apply_campaign(gen.ensure_tags(r["text"], tags), camp, plat)
         save_result(post_dir, plat["id"], r["text"], r["session_id"], "")
     with LOCK:
         JOBS[job][plat["id"]] = {"status": "done" if r["text"] else "error", "text": r["text"], "error": r["error"]}
@@ -192,15 +233,16 @@ def refine(post_dir, plat, instruction, current):
     cfg = load_cfg()
     rows = history(post_dir, plat["id"])
     sid = next((r.get("session_id") for r in reversed(rows) if r.get("session_id")), "")
+    camp = campaign_for(post_dir)
     r = {"text": "", "error": "", "session_id": ""}
     if sid:
-        r = gen.run(gen.build_refine_prompt(plat, instruction, current), post_dir, resume_id=sid, timeout=180)
+        r = gen.run(gen.build_refine_prompt(plat, instruction, current, campaign=camp), post_dir, resume_id=sid, timeout=180)
     if not r["text"]:      # 세션이 없거나 이어받기에 실패하면 규칙·말투를 다시 붙여 새로
         r = gen.run(gen.build_refine_prompt(plat, instruction, current, standalone=True,
-                                            voice_texts=gen.load_voice(VOICE), voice_note=cfg["voice_note"]),
+                                            voice_texts=gen.load_voice(VOICE), voice_note=cfg["voice_note"], campaign=camp),
                     post_dir, timeout=180)
     if r["text"]:
-        r["text"] = gen.ensure_tags(r["text"], fixed_tags(plat, cfg))
+        r["text"] = gen.apply_campaign(gen.ensure_tags(r["text"], fixed_tags(plat, cfg)), camp, plat)
         save_result(post_dir, plat["id"], r["text"], r["session_id"], instruction)
     log("refine", os.path.basename(post_dir), plat["id"], "ok" if r["text"] else "error: " + r["error"][:200])
     return r
@@ -323,6 +365,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     return self.send(200 if j else 404, j if j else {"error": "작업을 찾을 수 없습니다."})
             if u.path == "/api/posts":
                 return self.send(200, list_posts())
+            if u.path == "/api/items":
+                if q.get("kind") not in ITEMS:
+                    raise ValueError("없는 목록입니다.")
+                return self.send(200, load_items(q["kind"]))
             if u.path == "/api/post":
                 return self.send(200, post_info(post_path(q.get("name", ""))))
             if u.path == "/api/photo":
@@ -364,11 +410,23 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 d = gen.new_post_dir(POSTS, b.get("memo", ""))
                 write_text(os.path.join(d, "memo.txt"), b.get("memo", ""))
                 write_text(os.path.join(d, "title.txt"), b.get("title", ""))
+                write_text(os.path.join(d, "campaign.txt"), str(b.get("campaign") or ""))
                 return self.send(200, {"name": os.path.basename(d)})
             if u.path == "/api/post/save":
                 d = post_path(b.get("name", ""))
                 write_text(os.path.join(d, "memo.txt"), b.get("memo", ""))
                 write_text(os.path.join(d, "title.txt"), b.get("title", ""))
+                if "campaign" in b:
+                    write_text(os.path.join(d, "campaign.txt"), str(b.get("campaign") or ""))
+                return self.send(200, {"ok": True})
+            if u.path == "/api/items/save":
+                if b.get("kind") not in ITEMS:
+                    raise ValueError("없는 목록입니다.")
+                return self.send(200, save_item(b["kind"], b.get("item")))
+            if u.path == "/api/items/delete":
+                if b.get("kind") not in ITEMS:
+                    raise ValueError("없는 목록입니다.")
+                delete_item(b["kind"], b.get("id", ""))
                 return self.send(200, {"ok": True})
             if u.path == "/api/photo/delete":
                 d = post_path(b.get("name", ""))

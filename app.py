@@ -242,7 +242,7 @@ def photo_plan(post_dir, s):
     if mode != "none" or not gen.photo_names(post_dir):
         return mode, ""
     if not read_text(os.path.join(post_dir, "memo.txt")).strip():
-        raise ValueError("지금 고른 AI(%s · %s)는 사진을 못 봐요 — 메모를 적어 주거나, ⚙️ 설정에서 사진을 보는 AI·비전 모델을 골라 주세요."
+        raise ValueError("지금 고른 AI(%s · %s)는 사진을 못 봐요 — 메모를 적어 주거나, 설정 → AI 고르기에서 사진을 보는 AI·비전 모델을 골라 주세요."
                          % (ai.NAMES[s["engine"]], ai.model_of(s)))
     return mode, "%s 모델은 사진을 못 봐서 메모만으로 썼어요." % ai.model_of(s)
 
@@ -748,13 +748,12 @@ PHONE_ONLY_PC = {"/api/phone", "/api/phone/qr.svg", "/api/shortcuts", "/api/data
                  "/api/backup.zip", "/api/backups", "/api/restore"}
 LOGIN_HTML = """<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>글 도우미</title><link rel="icon" href="/icon.png"><link rel="apple-touch-icon" href="/icon.png"><style>
-body{margin:0;min-height:100vh;display:grid;place-items:center;font:16px/1.5 -apple-system,"Apple SD Gothic Neo",sans-serif;color:#2f2b45;
-background:radial-gradient(600px 400px at 0 0,#fde9f3,transparent 60%),radial-gradient(600px 400px at 100% 100%,#e6f1ff,transparent 60%),#f7f4fc}
-.b{background:#fff;border-radius:20px;padding:28px 24px;width:min(320px,88vw);text-align:center;box-shadow:0 8px 22px rgba(110,90,170,.16)}
-img{width:56px;height:56px;border-radius:16px}h1{font-size:19px;margin:10px 0 4px}p{color:#8781a0;font-size:13px;margin:0 0 16px}
-input{width:100%;box-sizing:border-box;font-size:28px;letter-spacing:10px;text-align:center;padding:10px;border:2px solid #ebe4f6;border-radius:14px;outline:none}
-input:focus{border-color:#8a72ee}button{margin-top:14px;width:100%;padding:12px;border:0;border-radius:999px;font-size:16px;font-weight:bold;color:#fff;
-background:linear-gradient(135deg,#8a72ee,#ef8fbf)}#e{color:#e05a76;font-size:13px;min-height:20px;margin-top:10px}</style></head><body>
+body{margin:0;min-height:100vh;display:grid;place-items:center;font:16px/1.5 -apple-system,"Apple SD Gothic Neo","Segoe UI","Malgun Gothic",sans-serif;color:#18181b;background:#f7f7f8}
+.b{background:#fff;border:1px solid #e4e4e7;border-radius:8px;padding:28px 24px;width:min(320px,88vw);text-align:center;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+img{width:48px;height:48px;border-radius:10px}h1{font-size:19px;margin:10px 0 4px}p{color:#52525b;font-size:13px;margin:0 0 16px}
+input{width:100%;box-sizing:border-box;font-size:28px;letter-spacing:10px;text-align:center;padding:10px;border:1px solid #d4d4d8;border-radius:6px;outline:none}
+input:focus{border-color:#1d4ed8;box-shadow:0 0 0 3px rgba(29,78,216,.18)}button{margin-top:14px;width:100%;padding:12px;border:0;border-radius:6px;font-size:16px;font-weight:600;color:#fff;
+background:#1d4ed8}#e{color:#b91c1c;font-size:13px;min-height:20px;margin-top:10px}</style></head><body>
 <form class="b" id="f"><img src="/icon.png" alt=""><h1>글 도우미</h1><p>PC 화면에 보이는 6자리 PIN 을 넣으세요</p>
 <input id="p" inputmode="numeric" autocomplete="one-time-code" maxlength="6" autofocus><button>들어가기</button><div id="e"></div></form>
 <script>document.getElementById("f").onsubmit=async e=>{e.preventDefault();

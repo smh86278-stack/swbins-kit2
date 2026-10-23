@@ -6,9 +6,9 @@
 > 이 파일이 **정본**이다. 다른 PC 의 Claude Code 도 이 파일만 읽으면 이어서 할 수 있게 적는다 — 상태가 바뀌면 여기 「지금 상태」를 고친다.
 > `DESIGN.md` 는 첫 판 설계서(2026-10-19)라 그 뒤 기능은 없다. 역사 참고용.
 
-## 지금 상태 (2026-10-23, 릴리스 v0.3.0 — AI 고르기)
+## 지금 상태 (2026-10-23, 릴리스 v0.3.0 — AI 고르기 · 그 뒤 새 디자인·포트폴리오 문서·CI, 아직 exe 미반영)
 
-다 된 것 — 화면 탭 순서대로:
+다 된 것 — 화면 탭 순서대로(아래 이모지는 옛 탭 이름 — 지금 화면은 선 아이콘):
 - **✍️ 쓰기**: 메모·사진(끌어 놓기·붙여넣기·끌어서 순서 바꾸기) → 플랫폼 고르기 → 플랫폼별 카드(병렬 `claude -p`), 말로/버튼으로 다듬기(세션 이어받기), 복사(블로그·카페는 제목 / 본문 서식 따로), 글쓰기 창 열기, 「새로 고른 곳만 만들기」, AI 티 점검(화면에서, 뻔한 표현·같은 끝맺음·고른 문단·이모지 반복·캠페인 조건), 「🗣 내 말투로 저장」.
   메모 틀 `templates.json`(맛집·카페·제품 후기·여행·👶 쌍둥이 육아·일상) — 빈 칸은 글에 안 넣는다(prompts\base.md 규칙).
   사진은 넣을 때 긴 변 1600·EXIF 회전·GPS 있으면 다시 저장(위치 지움), 찍은 날짜를 메모 「날짜:」 칸에, 아기 생일이 있으면 「개월 수:」 칸에.
@@ -39,7 +39,11 @@ gen.py            프롬프트 조립·claude -p 호출·결과 파싱·사진 �
 ai.py             AI 고르기 — 엔진 목록·설치 확인·엔진별 호출(codex exec·gemini -p·Ollama /api/chat)·사진 보는 법 (테스트 대상)
 store.py          데이터 폴더 위치(location.json)·복사·백업 zip/되살리기·자동 백업·성장 기록 (테스트 대상)
 qr.py             QR(바이트·M·버전 1~10) — 외부 라이브러리 없이
-ui.html           화면 전부(바닐라 JS, 외부 CDN 없음). 색은 swbins2 허브 theme.css 값을 복사해 씀
+ui.html           화면 전부(바닐라 JS, 외부 CDN 없음). 색은 키트(C:\swbins-kit) 허브 web\theme.css 토큰을 :root 변수로 복사해 씀
+                  — <html data-theme> basic(기본, 흰+파랑)·navy(진한 사이드바)·dark·pastel(예전 모양), 고른 값은 localStorage "theme"(창마다)
+                  아이콘은 IC 표의 선(stroke) SVG(<svg class="i" data-i="이름"> / JS 에선 ic("이름")) — 탭·단추에 이모지를 다시 넣지 말 것
+docs\             ARCHITECTURE.md(설계 설명) · images\ui-<탭>-<테마>.png(README 스크린샷 — 견본 데이터는 가상, 경로·이름 같은 개인 정보 없게)
+.github\workflows\test.yml   windows-latest × 파이썬 3.10·3.12, Pillow 깔고 unittest (private 저장소라 배지는 남에게 안 보일 수 있음)
 prompts\*.md      base(공통 규칙·뻔한 표현 목록) + 플랫폼별. platforms.json · templates.json
 make_icon.py      app.ico · icon.png(180) 만들기     build.py  PyInstaller 한 파일 exe     release.py  빌드→태그→GitHub 릴리스·exe 첨부
 tests\            test_gen · test_store · test_qr · test_ai(가짜 CLI·가짜 Ollama 서버 — 진짜 AI 안 부름) (unittest)
@@ -65,7 +69,10 @@ cd C:\swbins-kit2 && claude                                                     
   gemini `-p … --approval-mode default -o text`(헤드리스에선 쓰기·명령 도구가 빠지고 read_file 로 사진을 연다) · Ollama 는 `127.0.0.1:11434` 고정, 비전 모델(/api/show capabilities)일 때만 사진을 base64 로.
   사진을 못 보는 AI 면 메모만으로 쓰고 카드에 알린다(사진뿐이면 막음 — `app.photo_plan`). 세션 이어받기는 claude 만.
 - **화면은 `127.0.0.1` 에만** — POST 는 띄울 때마다 새로 만드는 토큰(X-Token). 예외는 「폰에서 쓰기」를 켰을 때의 PhoneHandler 하나(PIN·세션·PC 전용 길 차단 `PHONE_ONLY_PC`). 새 API 를 만들면 폰에서 막아야 하는지 꼭 따진다.
-- 답변·주석·화면 문구는 한국어(사용자에게 영어로 새지 말 것). "매크로" 대신 "자동화". 화면 말투는 "~해요".
+- 답변·주석·화면 문구는 한국어(사용자에게 영어로 새지 말 것). "매크로" 대신 "자동화". 화면 말투는 "~해요", 안내 문장은 짧게.
+- 디자인(2026-10-23, 「AI 스럽다」는 걱정으로 키트와 같은 방향으로 바꿈): 무채색 바탕 + 강조색 하나 + 선 아이콘, 그라데이션·이모지 탭 없음.
+  기능·API·요소 id 는 시험·데모 스크립트가 기대하니 겉을 바꿀 때도 그대로 둔다(`nav button[data-tab]`·`.card .st`·`.camp [data-act]`·`#go` 등).
+- 라이선스: 판매 예정 private 이라 LICENSE 파일 없음, README 에 "All rights reserved"(키트는 MIT 로 다름).
 - 빌드 결과(`dist\`·`build\`)·`*.spec` 은 git 에 넣지 않는다. `app.ico`·`icon.png` 는 넣는다.
 
 ## 시험 · 함정

@@ -86,6 +86,14 @@ class PromptTest(unittest.TestCase):
         self.assertIn("내 글", s2)
 
 
+try:
+    import PIL  # noqa: F401
+    HAS_PIL = True
+except ImportError:                                             # 회사망 PC 처럼 pip 가 막혀 Pillow 가 없는 파이썬 — 실패 대신 건너뜀
+    HAS_PIL = False
+
+
+@unittest.skipUnless(HAS_PIL, "Pillow 가 없는 파이썬 — 빌드에 쓰는(Pillow 있는) 파이썬으로 돌리면 이 시험도 돈다")
 class PhotoTest(unittest.TestCase):
     def test_shrink_turn_and_date(self):
         from PIL import Image

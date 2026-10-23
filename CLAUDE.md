@@ -41,7 +41,7 @@ store.py          데이터 폴더 위치(location.json)·복사·백업 zip/되
 qr.py             QR(바이트·M·버전 1~10) — 외부 라이브러리 없이
 ui.html           화면 전부(바닐라 JS, 외부 CDN 없음). 색은 swbins2 허브 theme.css 값을 복사해 씀
 prompts\*.md      base(공통 규칙·뻔한 표현 목록) + 플랫폼별. platforms.json · templates.json
-make_icon.py      app.ico · icon.png(180) 만들기     build.py  PyInstaller 한 파일 exe
+make_icon.py      app.ico · icon.png(180) 만들기     build.py  PyInstaller 한 파일 exe     release.py  빌드→태그→GitHub 릴리스·exe 첨부
 tests\            test_gen · test_store · test_qr · test_ai(가짜 CLI·가짜 Ollama 서버 — 진짜 AI 안 부름) (unittest)
 ```
 
@@ -78,13 +78,13 @@ cd C:\swbins-kit2 && claude                                                     
 - ui.html: `[hidden]` 은 맨 위 `display:none !important` 규칙으로 이긴다(없으면 display 규칙에 덮인다).
 - 회사망 PC 에선 **pip·파이썬 urllib 이 SSL 검사에 막힌다**(self signed) — 인증서 검사를 끄지 말고 의존성 없이 짠다(qr.py 가 그래서 자체 구현). curl·git 은 된다.
 - 실제 claude 호출 시험은 한 번에 30초쯤, 사용량을 먹으니 꼭 필요한 것만. codex·gemini 도 마찬가지 — 자동 시험은 test_ai 의 가짜로.
-- 이 PC(회사망)엔 Pillow 가 pip SSL 에 막혀 안 깔려 있어 test_gen 의 사진 시험 2개가 ModuleNotFoundError 로 실패한다(2026-10-23) — 코드 문제 아님.
+- 이 PC(회사망) 기본 파이썬엔 Pillow 가 pip SSL 에 막혀 없다 — 사진 시험(PhotoTest)은 Pillow 가 없으면 **건너뛴다**(skip, 실패 아님). 전부 돌리려면 Pillow 있는 파이썬(이 PC: `C:\swbins2\tools\macro-hub\.venv\Scripts\python.exe`)으로 `-m unittest discover tests`.
 
 ## git · 릴리스
 
 브랜치 `main` 하나, 원격 `origin` = github.com/smh86278-stack/swbins-kit2 (private). 원격 주소에 계정 이름을 넣어 둔다(`https://smh86278-stack@github.com/...`) — 이 PC 엔 정지된 옛 계정 자격 증명도 남아 있어서.
 커밋 전 `python -m unittest discover tests` 가 통과해야 한다. 커밋 메시지는 한국어.
 
-**릴리스**(exe 배포, 사용자가 "릴리스 올려 줘" 하면): 커밋 → `python build.py` → 태그 `vX.Y.Z` push → GitHub API 로 릴리스 + `dist\PostKit.exe` 자산.
+**릴리스**(exe 배포, 사용자가 "릴리스 올려 줘" 하면): 커밋 → 본문을 파일로 쓰고 `<Pillow·PyInstaller 있는 python> release.py vX.Y.Z notes.md` — 빌드 → 태그 push → GitHub API 릴리스 + `dist\PostKit.exe` 첨부까지 한 번에(2026-10-23). 손으로 할 때 순서도 같다.
 `gh` 가 없으면 토큰은 `git credential fill`(GCM)에서 꺼내 curl 에 바로 넘기고 **화면·파일에 남기지 않는다**. 릴리스 본문 JSON 은 명령줄로 넘기면 한글이 깨지니 파일로(`--data-binary @file`).
 지금까지: v0.1.0(48af3fc) · v0.2.0(691e3e1) · v0.3.0(2026-10-23, AI 고르기 8b4ba06 — 빌드는 Pillow·PyInstaller 가 있는 `C:\swbins2\tools\macro-hub\.venv\Scripts\python.exe -X utf8 build.py`).

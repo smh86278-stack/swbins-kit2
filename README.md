@@ -5,7 +5,21 @@
 ## 준비
 
 1. [Claude Code](https://claude.com/claude-code) 를 설치하고 터미널에서 `claude` 를 한 번 실행해 로그인합니다.
+   다른 AI 를 쓰고 싶으면 ⚙️ 설정 → 🤖 AI 고르기에서 **Codex(ChatGPT) · Gemini CLI · 로컬 AI(Ollama)** 로 바꿀 수 있습니다(아래 표).
 2. `PostKit.exe` 를 더블클릭합니다. 앱 창이 뜹니다(Edge). 창을 닫으면 잠시 뒤 스스로 끝납니다.
+
+### AI 고르기
+
+API 키는 쓰지 않습니다 — 각 프로그램에 이 PC 에서 직접 로그인해 둔 것을 그대로 띄웁니다. 앱은 AI 계정 정보를 읽거나 저장하지 않습니다.
+
+| AI | 준비 | 사진 | 다듬기 |
+|---|---|---|---|
+| Claude Code (기본) | `claude` 로그인 | 봄(Read 도구) | 앞 대화에 이어서 |
+| Codex (ChatGPT) | `npm install -g @openai/codex` → `codex login` | 봄(`--image` 첨부, 읽기 전용 샌드박스) | 지금 글·규칙을 다시 붙여 새로 |
+| Gemini CLI | `npm install -g @google/gemini-cli` → `gemini` 한 번 실행해 로그인 | 봄(read_file 도구 — CLI 버전에 따라 안 될 수 있음) | 새로 |
+| 로컬 AI (Ollama) | [ollama.com](https://ollama.com) 설치 → `ollama pull qwen3:8b` | 비전 모델(gemma3·qwen2.5vl·llava 등)만. qwen3 같은 글 전용 모델은 **메모만으로** 쓰고 알려 줌, 메모 없이 사진뿐이면 막음 | 새로 |
+
+모델 이름 칸을 비우면 각 CLI 의 기본 모델(Ollama 는 qwen3:8b)을 씁니다.
 
 ## 쓰는 법
 

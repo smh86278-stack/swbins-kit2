@@ -294,8 +294,11 @@ def apply_campaign(text, campaign, platform):
     return ensure_tags(text, campaign_tags(campaign, platform))
 
 
-def build_prompt(platform, memo, title, photos, voice_texts, voice_note, fixed_tags=(), campaign=None, kids=None):
-    """플랫폼 하나에 쓸 글을 요청하는 프롬프트."""
+def build_prompt(platform, memo, title, photos, voice_texts, voice_note, fixed_tags=(), campaign=None, kids=None,
+                 photo_mode="Read"):
+    """플랫폼 하나에 쓸 글을 요청하는 프롬프트.
+    photo_mode — 사진 보는 법(ai.photo_mode): 'Read'·'read_file' 은 그 도구로 ./photos/ 를 열고,
+    'attached' 는 사진이 붙어 온다, 'none' 은 못 본다(사진 내용을 지어내지 않게)."""
     tags = "%d개 안팎" % platform["hashtags"] if platform.get("hashtags") else "쓰지 않음"
     if platform.get("hashtags") and fixed_tags:
         tags += " — 이 태그는 꼭 그대로 넣는다(개수에 포함): " + " ".join(fixed_tags)
@@ -310,12 +313,19 @@ def build_prompt(platform, memo, title, photos, voice_texts, voice_note, fixed_t
     vb = voice_block(voice_texts, voice_note)
     if vb:
         head.append(vb)
-    mat = ["## 재료", "메모:\n" + (memo.strip() or "(메모 없음 — 사진만 보고 쓴다)")]
+    mat = ["## 재료", "메모:\n" + (memo.strip() or ("(메모 없음)" if photo_mode == "none" else "(메모 없음 — 사진만 보고 쓴다)"))]
     if title.strip():
         mat.append("제목 후보(그대로 쓰거나 다듬어도 된다): " + title.strip())
     if photos:
         shown = photos[:MAX_PHOTOS]
-        mat.append("사진 %d장 — 아래 순서대로 Read 로 열어 보고 쓴다:\n%s" % (len(shown), "\n".join("%d. ./photos/%s" % (i, n) for i, n in enumerate(shown, 1))))
+        names = "\n".join("%d. ./photos/%s" % (i, n) for i, n in enumerate(shown, 1))
+        if photo_mode == "none":
+            mat.append("사진 %d장이 있지만 이번엔 볼 수 없다. 사진 속 내용(음식 모양·색·장소 모습 등)을 지어내지 말고 메모에 있는 것만 쓴다. "
+                       "사진이 들어갈 자리는 [사진 1] 처럼 번호만 표시한다." % len(shown))
+        elif photo_mode == "attached":
+            mat.append("사진 %d장이 이 요청에 붙어 있다 — 아래 순서대로 보고 쓴다:\n%s" % (len(shown), names))
+        else:
+            mat.append("사진 %d장 — 아래 순서대로 %s 로 열어 보고 쓴다:\n%s" % (len(shown), photo_mode, names))
         if len(photos) > MAX_PHOTOS:
             mat.append("(사진이 %d장 더 있지만 보지 않는다.)" % (len(photos) - MAX_PHOTOS))
     else:
@@ -370,13 +380,15 @@ def clean_text(s):
     return (m.group(1) if m else s).strip()
 
 
-def run(prompt, workdir, resume_id=None, timeout=300):
-    """claude -p 한 번. 프롬프트는 stdin 으로(명령줄 길이·한글 깨짐 피함)."""
+def run(prompt, workdir, resume_id=None, timeout=300, model=""):
+    """claude -p 한 번. 프롬프트는 stdin 으로(명령줄 길이·한글 깨짐 피함). 다른 AI 는 ai.run 이 고른다."""
     claude = find_claude()
     if not claude:
         return {"text": "", "session_id": "", "error": NO_CLAUDE}
     args = claude + ["-p", "--output-format", "json", "--permission-mode", "dontAsk",
                      "--allowedTools", "Read", "--disallowedTools"] + DENY
+    if model:
+        args += ["--model", model]
     if resume_id:
         args += ["--resume", resume_id]
     kw = {"creationflags": CREATE_NO_WINDOW} if IS_WIN else {}

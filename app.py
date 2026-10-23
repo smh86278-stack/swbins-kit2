@@ -28,6 +28,7 @@ import webbrowser
 import zipfile
 from datetime import datetime
 
+import ai
 import gen
 import store
 
@@ -174,11 +175,11 @@ def history(post_dir, pid):
     return rows
 
 
-def save_result(post_dir, pid, text, session_id, instruction):
+def save_result(post_dir, pid, text, session_id, instruction, engine="claude"):
     write_text(os.path.join(post_dir, pid + ".md"), text)
     with open(os.path.join(post_dir, pid + ".history.jsonl"), "a", encoding="utf-8") as f:
         f.write(json.dumps({"ts": datetime.now().isoformat(timespec="seconds"), "instruction": instruction,
-                            "text": text, "session_id": session_id}, ensure_ascii=False) + "\n")
+                            "text": text, "session_id": session_id, "engine": engine}, ensure_ascii=False) + "\n")
 
 
 def post_info(post_dir):
@@ -217,50 +218,76 @@ def fixed_tags(plat, cfg):
     return gen.parse_tags(cfg.get("fixed_tags", "")) if plat.get("hashtags") else []
 
 
-def gen_one(job, post_dir, plat, cfg):
+def gen_one(job, post_dir, plat, cfg, s, mode, note):
     memo = read_text(os.path.join(post_dir, "memo.txt"))
     title = read_text(os.path.join(post_dir, "title.txt"))
     tags = fixed_tags(plat, cfg)
     camp = campaign_for(post_dir)
-    prompt = gen.build_prompt(plat, memo, title, gen.photo_names(post_dir), gen.load_voice(VOICE), cfg["voice_note"], tags, camp, cfg.get("kids"))
-    r = gen.run(prompt, post_dir)
+    photos = gen.photo_names(post_dir)
+    prompt = gen.build_prompt(plat, memo, title, photos, gen.load_voice(VOICE), cfg["voice_note"], tags, camp, cfg.get("kids"),
+                              photo_mode=mode)
+    r = ai.run(s, prompt, post_dir, photos=photos if mode == "attached" else ())
     if r["text"]:
         r["text"] = gen.apply_campaign(gen.ensure_tags(r["text"], tags), camp, plat)
-        save_result(post_dir, plat["id"], r["text"], r["session_id"], "")
+        save_result(post_dir, plat["id"], r["text"], r["session_id"], "", s["engine"])
     with LOCK:
-        JOBS[job][plat["id"]] = {"status": "done" if r["text"] else "error", "text": r["text"], "error": r["error"]}
+        JOBS[job][plat["id"]] = {"status": "done" if r["text"] else "error", "text": r["text"], "error": r["error"],
+                                 "note": note if r["text"] else ""}
     log("gen", os.path.basename(post_dir), plat["id"], "ok" if r["text"] else "error: " + r["error"][:200])
+
+
+def photo_plan(post_dir, s):
+    """고른 AI 가 사진을 못 보면 — 메모가 있으면 메모만으로 쓰고 알려 주고, 사진뿐이면 막는다. (사진 보는 법, 알릴 말)"""
+    mode = ai.photo_mode(s)
+    if mode != "none" or not gen.photo_names(post_dir):
+        return mode, ""
+    if not read_text(os.path.join(post_dir, "memo.txt")).strip():
+        raise ValueError("지금 고른 AI(%s · %s)는 사진을 못 봐요 — 메모를 적어 주거나, ⚙️ 설정에서 사진을 보는 AI·비전 모델을 골라 주세요."
+                         % (ai.NAMES[s["engine"]], ai.model_of(s)))
+    return mode, "%s 모델은 사진을 못 봐서 메모만으로 썼어요." % ai.model_of(s)
 
 
 def start_gen(post_dir, pids):
     cfg = load_cfg()
-    job = secrets.token_hex(6)
+    s = ai.settings(cfg)
+    why = ai.not_ready(s)
+    if why:
+        raise ValueError(why)
     plats = [p for p in (platform(x) for x in pids) if p]
     if not plats:
         raise ValueError("플랫폼을 하나 이상 고르세요.")
+    mode, note = photo_plan(post_dir, s)
+    job = secrets.token_hex(6)
     with LOCK:
         JOBS[job] = {p["id"]: {"status": "running", "text": "", "error": ""} for p in plats}
     for p in plats:
-        threading.Thread(target=gen_one, args=(job, post_dir, p, cfg), daemon=True).start()
+        threading.Thread(target=gen_one, args=(job, post_dir, p, cfg, s, mode, note), daemon=True).start()
     return job
 
 
 def refine(post_dir, plat, instruction, current):
     cfg = load_cfg()
+    s = ai.settings(cfg)
+    why = ai.not_ready(s)
+    if why:
+        raise ValueError(why)
     rows = history(post_dir, plat["id"])
-    sid = next((r.get("session_id") for r in reversed(rows) if r.get("session_id")), "")
+    sid = ""
+    if s["engine"] == "claude":     # 세션 이어받기는 claude 만(다른 AI 로 쓴 글이면 새로)
+        sid = next((r.get("session_id") for r in reversed(rows) if r.get("session_id")
+                    and r.get("engine", "claude") == "claude"), "")
     camp = campaign_for(post_dir)
     r = {"text": "", "error": "", "session_id": ""}
     if sid:
-        r = gen.run(gen.build_refine_prompt(plat, instruction, current, campaign=camp, kids=cfg.get("kids")), post_dir, resume_id=sid, timeout=180)
+        r = ai.run(s, gen.build_refine_prompt(plat, instruction, current, campaign=camp, kids=cfg.get("kids")), post_dir, resume_id=sid, timeout=180)
     if not r["text"]:      # 세션이 없거나 이어받기에 실패하면 규칙·말투를 다시 붙여 새로
-        r = gen.run(gen.build_refine_prompt(plat, instruction, current, standalone=True,
-                                            voice_texts=gen.load_voice(VOICE), voice_note=cfg["voice_note"], campaign=camp,
-                                            kids=cfg.get("kids")),
-                    post_dir, timeout=180)
+        r = ai.run(s, gen.build_refine_prompt(plat, instruction, current, standalone=True,
+                                              voice_texts=gen.load_voice(VOICE), voice_note=cfg["voice_note"], campaign=camp,
+                                              kids=cfg.get("kids")),
+                   post_dir, timeout=180)
     if r["text"]:
         r["text"] = gen.apply_campaign(gen.ensure_tags(r["text"], fixed_tags(plat, cfg)), camp, plat)
-        save_result(post_dir, plat["id"], r["text"], r["session_id"], instruction)
+        save_result(post_dir, plat["id"], r["text"], r["session_id"], instruction, s["engine"])
     log("refine", os.path.basename(post_dir), plat["id"], "ok" if r["text"] else "error: " + r["error"][:200])
     return r
 
@@ -486,11 +513,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if u.path == "/api/state":
                 cfg = load_cfg()
                 voice = sorted(n for n in os.listdir(VOICE) if n.endswith(".txt")) if os.path.isdir(VOICE) else []
-                claude = gen.find_claude()
-                return self.send(200, {"claude": claude[0] if claude else "", "no_claude": gen.NO_CLAUDE,
+                return self.send(200, {"ai": ai.status(cfg, full=False),
                                        "platforms": platforms(), "config": cfg, "templates": gen.load_templates(),
                                        "frozen": FROZEN,
                                        "voice": [{"name": n, "text": read_text(os.path.join(VOICE, n))} for n in voice]})
+            if u.path == "/api/ai":                     # ⚙️ 설정의 AI 고르기 — 엔진마다 깔렸는지·사진 보는지
+                return self.send(200, ai.status(load_cfg()))
             if u.path == "/api/job":
                 with LOCK:
                     j = JOBS.get(q.get("id", ""))
@@ -637,8 +665,6 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 return self.send(200, {"photos": gen.photo_names(d)})
             if u.path == "/api/gen":
                 d = post_path(b.get("name", ""))
-                if not gen.find_claude():
-                    raise ValueError(gen.NO_CLAUDE)
                 return self.send(200, {"job": start_gen(d, b.get("platforms") or [])})
             if u.path == "/api/refine":
                 d = post_path(b.get("name", ""))
@@ -670,6 +696,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 for k in ("voice_note", "default_platforms", "write_urls", "fixed_tags", "kids"):
                     if k in b:
                         cfg[k] = b[k]
+                if "ai" in b:
+                    cfg["ai"] = ai.clean_settings(b["ai"])
                 os.makedirs(DATA, exist_ok=True)
                 write_text(CFG, json.dumps(cfg, ensure_ascii=False, indent=2))
                 return self.send(200, cfg)

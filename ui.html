@@ -46,6 +46,10 @@ nav button.on { background: var(--solid); color: var(--accent); font-weight: bol
 nav .grow { flex: 1; }
 .claude { font-size: 12px; color: var(--muted); padding: 8px 10px; border-radius: var(--r-sm); background: var(--panel); display: flex; gap: 6px; align-items: center; }
 .claude::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 20%, transparent); }
+.ailist { display: grid; gap: 6px; }
+.ailist label { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border-radius: var(--r-sm); background: var(--panel); cursor: pointer; }
+.ailist label.off { opacity: .75; }
+.ailist .sub { display: block; font-size: 12px; color: var(--muted); }
 .claude.bad::before { background: var(--bad); box-shadow: 0 0 0 3px color-mix(in srgb, var(--bad) 20%, transparent); }
 
 main { flex: 1; overflow: auto; padding: 22px 26px 60px 8px; }
@@ -366,6 +370,14 @@ body.phone .pc-only { display: none !important; }
 
   <section id="settings">
     <div class="head"><div><h1>설정</h1><p>한 번 적어 두면 계속 써요.</p></div></div>
+    <div class="box">
+      <div class="step"><i>🤖</i>AI 고르기 <span class="hint">— 글을 써 줄 AI. 각 프로그램에 이 PC 에서 로그인해 둔 것을 그대로 써요(API 키 안 씀)</span></div>
+      <div class="ailist" id="aiList"><span class="hint">확인 중…</span></div>
+      <div class="row" style="margin-top:10px"><label class="small" style="margin:0">모델 이름</label>
+        <input type="text" id="aiModel" placeholder="비우면 기본 모델" style="flex:1;max-width:260px"><button class="btn main" id="saveAi">저장</button>
+        <button class="btn" id="reAi" title="설치·로그인 뒤 다시 확인">↻ 다시 확인</button></div>
+      <p class="hint" id="aiHint" style="margin:6px 0 0"></p>
+    </div>
     <div class="box pc-only">
       <div class="step"><i>💾</i>데이터 · 백업</div>
       <p class="hint" style="margin:0 0 4px">말투·지난 글·캠페인·장부가 모두 이 폴더에 있어요.</p>
@@ -498,7 +510,7 @@ body.phone .pc-only { display: none !important; }
       <div class="box">
         <h2><span class="e">🚀</span>처음 한 번만</h2>
         <ol>
-          <li><b>Claude Code</b> 를 설치하고, 터미널에서 <code>claude</code> 를 한 번 실행해 로그인해요.</li>
+          <li><b>Claude Code</b> 를 설치하고, 터미널에서 <code>claude</code> 를 한 번 실행해 로그인해요. (Codex·Gemini CLI·로컬 AI(Ollama)를 쓰고 싶으면 ⚙️ 설정의 「AI 고르기」에서 바꿔요.)</li>
           <li>왼쪽 아래가 <b>● AI 연결됨</b> 이면 준비 끝. 처음 켜면 바탕 화면·시작 메뉴에 <b>글 도우미</b> 바로가기가 생겨요.</li>
           <li><b>🗣️ 내 말투</b>에 예전에 직접 쓴 글을 3~5편 넣어 두면 훨씬 내 글 같아져요.</li>
           <li>네이버 카페에 올린다면 <b>⚙️ 설정</b>에 카페 글쓰기 주소를 넣어요.</li>
@@ -566,7 +578,7 @@ body.phone .pc-only { display: none !important; }
         <h2><span class="e">🙋</span>자주 묻는 질문</h2>
         <details><summary>왜 자동으로 올려 주지 않나요?</summary><p>네이버는 자동 프로그램으로 글을 올리는 걸 약관으로 막고 있어서, 걸리면 저품질 처리나 계정 정지가 될 수 있어요. 그래서 글 만들기까지만 하고 올리기는 직접 해요.</p></details>
         <details><summary>협찬·광고 글은요?</summary><p>메모에 <code>#협찬</code> 이나 <code>#광고</code> 를 넣으면 첫 줄에 표기 문장이 들어가요. 협찬 글에 표기를 빼면 표시광고법 위반이 될 수 있어요.</p></details>
-        <details><summary>글이 안 나오고 오류가 떠요.</summary><p>왼쪽 아래가 빨간 점이면 claude 를 못 찾은 거예요. 설치 후 터미널에서 <code>claude</code> 를 실행해 로그인이 되어 있는지 확인하고 앱을 다시 켜 주세요. 사용량 한도에 걸렸을 때도 오류가 나요 — 잠시 뒤 다시 해 보세요.</p></details>
+        <details><summary>글이 안 나오고 오류가 떠요.</summary><p>왼쪽 아래가 빨간 점이면 고른 AI 를 못 찾은 거예요. ⚙️ 설정의 「AI 고르기」에 설치 방법이 나와요 — 설치하고 터미널에서 한 번 실행해 로그인한 뒤 「↻ 다시 확인」을 눌러 주세요. 로컬 AI(Ollama)는 Ollama 가 켜져 있고 모델을 받아 둬야 해요. 사용량 한도에 걸렸을 때도 오류가 나요 — 잠시 뒤 다시 해 보세요.</p></details>
         <details><summary>만든 글과 사진은 어디에 저장되나요? 백업은요?</summary><p>처음엔 이 PC 의 <code>%APPDATA%\PostKit</code> 에 있어요. <b>⚙️ 설정 → 💾 데이터 · 백업</b>에서 OneDrive·구글 드라이브 폴더로 옮기면 백업이 저절로 되고, 다른 PC 에서 같은 폴더를 고르면 같은 데이터를 써요. 「백업 받기」로 zip 을 받아 둘 수도 있고, 앱이 하루 한 번 사진 빼고 자동 백업도 해요.</p></details>
         <details><summary>👶 성장 기록은 어떻게 모아요?</summary><p><b>📂 지난 글 → 👶 성장 기록</b>을 누르면 「개월 수」가 있는 육아 글이 개월 순서로 모여요. 기록을 골라 「모아서 글 쓰기」를 누르면 그 기록과 대표 사진으로 새 글이 열려요 — 돌 기념·연말 정리 글에 좋아요.</p></details>
         <details><summary>앱은 어떻게 끄나요?</summary><p>창을 닫으면 1분 안에 저절로 꺼져요. 글을 만드는 중이면 끝난 뒤에 꺼져요.</p></details>
@@ -605,7 +617,7 @@ document.querySelectorAll("nav button[data-tab]").forEach(b => b.onclick = () =>
   document.querySelectorAll("nav button[data-tab]").forEach(x => x.classList.toggle("on", x === b));
   document.querySelectorAll("section").forEach(s => s.classList.toggle("on", s.id === b.dataset.tab));
   if (b.dataset.tab === "posts") { loadPosts(); if (!$("#growthView").hidden) loadGrowth(); }
-  if (b.dataset.tab === "settings") loadData();
+  if (b.dataset.tab === "settings") { loadData(); loadAi(); }
   if (b.dataset.tab === "camps") loadCamps();
   if (b.dataset.tab === "ledger") loadLedger();
   main.scrollTop = 0;
@@ -624,10 +636,10 @@ async function loadState() {
   const d = await api("/api/state");
   S.platforms = d.platforms; S.config = d.config;
   const c = $("#claude");
-  c.textContent = d.claude ? "AI 연결됨" : "claude 없음";
-  c.className = "claude" + (d.claude ? "" : " bad");
-  c.title = d.claude || d.no_claude;
-  if (!d.claude) toast(d.no_claude);
+  c.textContent = d.ai.ready ? d.ai.name : d.ai.name + " 없음";
+  c.className = "claude" + (d.ai.ready ? "" : " bad");
+  c.title = d.ai.ready ? (d.ai.model ? "모델 " + d.ai.model : "기본 모델") : d.ai.hint;
+  if (!d.ai.ready) toast(d.ai.name + " 를 쓸 수 없어요 — ⚙️ 설정의 AI 고르기를 보세요.");
   $("#plats").innerHTML = d.platforms.map(p =>
     `<label style="${pc(p.id)}"><input type="checkbox" value="${esc(p.id)}" ${d.config.default_platforms.includes(p.id) ? "checked" : ""}>${picon(p.id)}${esc(p.name)}</label>`).join("");
   $("#tpls").innerHTML = '<span class="hint">틀:</span>' + d.templates.map((t, i) => `<button data-t="${i}" title="메모 칸에 빈칸 틀을 깔아요">${esc(t.name)}</button>`).join("");
@@ -799,6 +811,7 @@ async function poll(job, name) {
     if (!S.busy[p]) continue;
     S.busy[p] = false;
     if (v.status === "done") S.texts[p] = v.text;
+    if (v.note) toast(v.note);
     card(p, v.status, v.error);
   }
   if (running) return setTimeout(() => poll(job, name), 2000);
@@ -984,6 +997,35 @@ $("#saveKids").onclick = () => api("/api/config", { kids: { birthday: $("#kidBir
   .then(d => { S.config = d; toast("저장했어요."); }).catch(fail);
 $("#saveTags").onclick =() => api("/api/config", { fixed_tags: $("#fixedTags").value.trim() }).then(() => toast("저장했어요 — 다음에 만드는 글부터 들어가요.")).catch(fail);
 $("#openData").onclick = () => api("/api/open", { what: "data" }).catch(fail);
+
+// AI 고르기 — 엔진마다 깔렸는지·사진을 보는지. 모델 이름은 엔진마다 따로 기억한다
+async function loadAi() {
+  let d;
+  try { d = await api("/api/ai"); } catch (e) { return fail(e); }
+  S.ai = d;
+  $("#aiList").innerHTML = d.engines.map(e => `<label class="${e.installed ? "" : "off"}">
+    <input type="radio" name="aiEngine" value="${esc(e.id)}" ${e.id === d.engine ? "checked" : ""}>
+    <span><b>${esc(e.name)}</b> ${e.installed ? '<span class="tag">준비됨</span>' : '<span class="tag">설치·로그인 필요</span>'}
+      <span class="sub">📷 ${esc(e.id === "ollama" && e.installed && e.vision !== undefined
+        ? (e.vision ? "지금 모델은 사진을 봐요" : "지금 모델은 사진을 못 봐요 — 메모만으로 써요 (사진을 보려면 gemma3 같은 비전 모델)") : e.photos)}</span>
+      ${e.installed ? "" : `<span class="sub">설치: ${esc(e.install)}</span>`}</span></label>`).join("");
+  $("#aiList").querySelectorAll("input").forEach(r => r.onchange = aiModelField);
+  aiModelField();
+}
+function aiModelField() {
+  const e = (document.querySelector('input[name="aiEngine"]:checked') || {}).value || "claude";
+  $("#aiModel").value = (S.ai.models || {})[e] || "";
+  $("#aiModel").placeholder = e === "ollama" ? "qwen3:8b (비우면)" : "비우면 기본 모델";
+  const have = ((S.ai.engines.find(x => x.id === "ollama") || {}).models || []).join(", ");
+  $("#aiHint").textContent = e === "ollama" ? "Ollama 는 이 PC 안에서만 돌아요(무료·밖으로 안 나감)." + (have ? " 받아 둔 모델: " + have : "")
+    : e === "claude" ? "다듬기를 앞 대화에 이어서 해요." : "다듬기는 지금 글·규칙·말투를 다시 붙여 새로 부탁해요.";
+}
+$("#saveAi").onclick = () => {
+  const e = (document.querySelector('input[name="aiEngine"]:checked') || {}).value || "claude";
+  const models = Object.assign({}, S.ai.models, { [e]: $("#aiModel").value.trim() });
+  api("/api/config", { ai: { engine: e, models } }).then(() => { toast("저장했어요 — 다음 글부터 이 AI 로 써요."); loadAi(); loadState(); }).catch(fail);
+};
+$("#reAi").onclick = () => { loadAi(); loadState(); };
 
 // ---------- 데이터 폴더 · 백업 ----------
 async function loadData() {

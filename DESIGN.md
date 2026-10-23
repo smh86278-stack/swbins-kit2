@@ -22,7 +22,7 @@
 |---|---|---|
 | 창 | 파이썬 로컬 HTTP 서버(127.0.0.1, 빈 포트 자동) + Edge `--app=` 창(없으면 기본 브라우저) | `chat.py` `main()`·`open_window` 부분 |
 | 화면 | `ui.html` 한 장(바닐라 JS, 외부 CDN 없음) | `ui.html` 의 뼈대만 — 펫·메신저 기능은 가져오지 않는다 |
-| AI | `claude -p --output-format json --permission-mode dontAsk --allowedTools Read --disallowedTools Bash,Write,Edit,WebFetch,WebSearch` + `--add-dir <글 폴더>` | `chat_runner.py` `claude_cmd()`·`args` 조립·결과 JSON 파싱(`CREATE_NO_WINDOW` 포함) |
+| AI | (2026-10-23 부터 `ai.py` 로 Codex·Gemini CLI·Ollama 도 고름 — README 「AI 고르기」) `claude -p --output-format json --permission-mode dontAsk --allowedTools Read --disallowedTools Bash,Write,Edit,WebFetch,WebSearch` + `--add-dir <글 폴더>` | `chat_runner.py` `claude_cmd()`·`args` 조립·결과 JSON 파싱(`CREATE_NO_WINDOW` 포함) |
 | 저장 | `%APPDATA%\PostKit\` | `chat.py` 의 LOCALDATA 방식 |
 | exe | PyInstaller `--onefile --noconsole` | `build.py` (펫·company.json 줄은 뺀다) |
 
@@ -122,7 +122,8 @@ new_post_dir(root, memo) -> str        # YYYYMMDD-<메모 앞 12자 안전화>, 
 | 길 | 일 |
 |---|---|
 | `GET /` | ui.html (토큰 심어서) |
-| `GET /api/state` | claude 상태·플랫폼 목록·config·voice 목록 |
+| `GET /api/state` | 고른 AI 상태(`ai`)·플랫폼 목록·config·voice 목록 |
+| `GET /api/ai` | AI 고르기 — 엔진마다 깔렸는지·설치 안내·사진 보는지 (고른 값은 `POST /api/config` 의 `ai`) |
 | `POST /api/post/new` | memo·title·사진(파일 경로 목록 — 화면에선 `<input type=file>` 로 고른 뒤 서버가 복사. 끌어놓기는 경로를 못 받으니 파일 내용을 multipart 로 올림) → post_dir |
 | `POST /api/gen` | post_dir·platforms[] → 플랫폼별 스레드 시작, job id |
 | `GET /api/job/<id>` | 플랫폼별 {status, text, error} |

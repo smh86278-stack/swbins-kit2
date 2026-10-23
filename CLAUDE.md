@@ -16,7 +16,7 @@
 - **📂 지난 글**: 다시 열기 · **👶 성장 기록**(「개월 수」 있는 글을 개월 순, 골라서 모은 메모+대표 사진으로 새 글).
 - **🎁 캠페인**: 체험단·협찬·공구 — 필수 키워드(횟수)·태그·링크·요구사항을 프롬프트에, 협찬/공구 표기 문장은 앱이 직접 넣음(`gen.apply_campaign`, 받침 따라 조사), 마감 3일 전 배지, 「완료」→ 장부.
 - **📒 장부**: 받은 돈·물품 가액·글 주소, 연도 합계·월별 표, CSV(엑셀용 BOM).
-- **⚙️ 설정**: 💾 데이터 폴더 옮기기(OneDrive·구글 드라이브·폴더 고르기, 복사·원래 자리 남김, 이미 데이터 있으면 그대로 씀) · 백업 zip 받기/되살리기 · 하루 한 번 자동 백업 · 📱 폰에서 쓰기 · 👶 아기 생일·애칭(글엔 애칭만) · 늘 붙이는 해시태그 · 카페 글쓰기 주소 · 바로가기 다시 만들기.
+- **⚙️ 설정**: 🤖 AI 고르기(Claude Code 기본 · Codex · Gemini CLI · Ollama — `ai.py`, 2026-10-23) · 💾 데이터 폴더 옮기기(OneDrive·구글 드라이브·폴더 고르기, 복사·원래 자리 남김, 이미 데이터 있으면 그대로 씀) · 백업 zip 받기/되살리기 · 하루 한 번 자동 백업 · 📱 폰에서 쓰기 · 👶 아기 생일·애칭(글엔 애칭만) · 늘 붙이는 해시태그 · 카페 글쓰기 주소 · 바로가기 다시 만들기.
 - **📱 폰에서 쓰기**: 켤 때만 LAN 주소:8653(PhoneHandler), QR(`qr.py` 자체 구현)·6자리 PIN → HttpOnly 세션, 5번 틀리면 5분 잠금, PC 를 건드리는 길 막음, 좁은 화면은 탭이 아래로.
 - **❓ 도움말** 탭, 첫 실행 때 도움말 먼저, exe 처음 실행 때 바탕 화면·시작 메뉴 바로가기.
 
@@ -26,7 +26,7 @@
 3. 말투가 얼마나 비슷한지, AI 티 점검 기준이 적당한지
 
 **사용자 결정·취향**(다시 묻지 말 것):
-- 쓰는 사람은 일단 나만 → AI 는 `claude -p` 로그인(Claude Code). API 키 방식은 판매판 때.
+- 쓰는 사람은 일단 나만 → AI 는 각 CLI 로그인(기본 Claude Code, 2026-10-23 부터 Codex·Gemini CLI·로컬 Ollama 도 고를 수 있음). API 키 방식은 쓰지 않는다(판매판 때 다시).
 - 부업 방향: **체험단·협찬·공구** + **쌍둥이 아기 육아 일상** 글. 카카오 쪽은 "잘 모르겠으니 패스".
 - 「AI 글 티」는 속이는 기능이 아니라 내 말투·사실 재료·뻔한 표현 걷어내기로 푼다. 광고·AI 표시를 숨기는 기능은 안 만든다.
 - 기능 추천은 멈춘 상태 — **써 본 뒤 나온 요청만** 넣는다. 넣기 전에 "굳이 필요?" 부터 따진다. 속도 중시.
@@ -36,12 +36,13 @@
 ```
 app.py            서버·창·라우팅·폰 서버(PhoneHandler)·데이터 폴더/백업 길
 gen.py            프롬프트 조립·claude -p 호출·결과 파싱·사진 손질·태그/협찬 표기·아기 개월 수 (테스트 대상)
+ai.py             AI 고르기 — 엔진 목록·설치 확인·엔진별 호출(codex exec·gemini -p·Ollama /api/chat)·사진 보는 법 (테스트 대상)
 store.py          데이터 폴더 위치(location.json)·복사·백업 zip/되살리기·자동 백업·성장 기록 (테스트 대상)
 qr.py             QR(바이트·M·버전 1~10) — 외부 라이브러리 없이
 ui.html           화면 전부(바닐라 JS, 외부 CDN 없음). 색은 swbins2 허브 theme.css 값을 복사해 씀
 prompts\*.md      base(공통 규칙·뻔한 표현 목록) + 플랫폼별. platforms.json · templates.json
 make_icon.py      app.ico · icon.png(180) 만들기     build.py  PyInstaller 한 파일 exe
-tests\            test_gen · test_store · test_qr (unittest)
+tests\            test_gen · test_store · test_qr · test_ai(가짜 CLI·가짜 Ollama 서버 — 진짜 AI 안 부름) (unittest)
 ```
 
 데이터(앱이 쓰는 것, 저장소 밖): 기본 `%APPDATA%\PostKit\`(config.json · voice\ · posts\<날짜-메모>\{memo.txt, photos\, order.json, <플랫폼>.md, .history.jsonl, campaign.txt} · campaigns.json · ledger.json). 옮겼으면 `%APPDATA%\PostKit\location.json` 이 새 자리를 가리킨다. 로그·자동 백업은 `%LOCALAPPDATA%\PostKit\`(app.log · backups\).
@@ -59,7 +60,10 @@ cd C:\swbins-kit2 && claude                                                     
 
 - **회사 값 금지** — `C:\swbins2`(회사 일)·`C:\swbins-kit` 과 별개 저장소. 회사 이름·주소·계정이 코드·문서에 들어가면 안 된다. 개인 정보(블로그 주소·아이 실명 등)도 앱 데이터에만, 저장소엔 넣지 않는다.
 - **발행 자동화 금지** — 네이버 글쓰기 창을 자동으로 채우거나 발행 버튼을 누르는 코드, 로그인 자동화, 여러 계정 돌리기는 만들지 않는다. "글쓰기 창 열어 주기 + 클립보드 복사" 까지만. 인스타·틱톡 공식 API 업로드는 DESIGN.md §9 에 설계만.
-- **AI 연결은 `claude -p` 만** — `--allowedTools Read`(사진 보기용), Bash·Write·웹 도구는 `--disallowedTools`. 프롬프트는 stdin 으로.
+- **AI 연결은 CLI 로그인·로컬 Ollama 만**(API 키·토큰을 읽거나 저장하지 않는다). 프롬프트는 stdin 으로, 파일·명령은 못 건드리게:
+  claude `--allowedTools Read`(사진 보기용), Bash·Write·웹 도구는 `--disallowedTools` · codex `exec --sandbox read-only`, 사진은 `--image` ·
+  gemini `-p … --approval-mode default -o text`(헤드리스에선 쓰기·명령 도구가 빠지고 read_file 로 사진을 연다) · Ollama 는 `127.0.0.1:11434` 고정, 비전 모델(/api/show capabilities)일 때만 사진을 base64 로.
+  사진을 못 보는 AI 면 메모만으로 쓰고 카드에 알린다(사진뿐이면 막음 — `app.photo_plan`). 세션 이어받기는 claude 만.
 - **화면은 `127.0.0.1` 에만** — POST 는 띄울 때마다 새로 만드는 토큰(X-Token). 예외는 「폰에서 쓰기」를 켰을 때의 PhoneHandler 하나(PIN·세션·PC 전용 길 차단 `PHONE_ONLY_PC`). 새 API 를 만들면 폰에서 막아야 하는지 꼭 따진다.
 - 답변·주석·화면 문구는 한국어(사용자에게 영어로 새지 말 것). "매크로" 대신 "자동화". 화면 말투는 "~해요".
 - 빌드 결과(`dist\`·`build\`)·`*.spec` 은 git 에 넣지 않는다. `app.ico`·`icon.png` 는 넣는다.
@@ -73,7 +77,8 @@ cd C:\swbins-kit2 && claude                                                     
 - 띄워 둔 `PostKit.exe` 가 있으면 빌드가 덮어쓰지 못한다 — `Get-Process PostKit | Stop-Process` 후 빌드.
 - ui.html: `[hidden]` 은 맨 위 `display:none !important` 규칙으로 이긴다(없으면 display 규칙에 덮인다).
 - 회사망 PC 에선 **pip·파이썬 urllib 이 SSL 검사에 막힌다**(self signed) — 인증서 검사를 끄지 말고 의존성 없이 짠다(qr.py 가 그래서 자체 구현). curl·git 은 된다.
-- 실제 claude 호출 시험은 한 번에 30초쯤, 사용량을 먹으니 꼭 필요한 것만.
+- 실제 claude 호출 시험은 한 번에 30초쯤, 사용량을 먹으니 꼭 필요한 것만. codex·gemini 도 마찬가지 — 자동 시험은 test_ai 의 가짜로.
+- 이 PC(회사망)엔 Pillow 가 pip SSL 에 막혀 안 깔려 있어 test_gen 의 사진 시험 2개가 ModuleNotFoundError 로 실패한다(2026-10-23) — 코드 문제 아님.
 
 ## git · 릴리스
 

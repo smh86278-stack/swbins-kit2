@@ -332,6 +332,7 @@ button.danger:hover:not(:disabled) { border-color: var(--bad); }
 .phonebox .pin { font: 700 30px/1 var(--mono); letter-spacing: 8px; margin-bottom: 8px; }
 .phonebox ul { margin: 4px 0 0; padding-left: 18px; }
 body.phone .pc-only { display: none !important; }
+body:not(.os-win) .win-only, body:not(.os-mac) .mac-only { display: none !important; }
 
 /* 좁은 화면(폰) — 탭은 아래로 */
 @media (max-width: 760px) {
@@ -475,7 +476,8 @@ body.phone .pc-only { display: none !important; }
           <div class="pin" id="phonePin"></div>
           <ul class="hint">
             <li>폰과 PC 가 <b>같은 와이파이</b>여야 해요. 회사·카페 와이파이에선 막혀 있을 수 있어요.</li>
-            <li>처음 켤 때 윈도우가 「네트워크 허용」을 물으면 <b>개인 네트워크</b>만 허용하세요.</li>
+            <li class="win-only">처음 켤 때 윈도우가 「네트워크 허용」을 물으면 <b>개인 네트워크</b>만 허용하세요.</li>
+            <li class="mac-only">맥이 「들어오는 네트워크 연결을 허용할까요?」라고 물으면 <b>허용</b>을 눌러요(집 와이파이에서만 켜세요).</li>
             <li>끄거나 앱을 닫으면 바로 끊기고, 다시 켜면 PIN 이 바뀌어요.</li>
             <li>사파리에서 「공유 → 홈 화면에 추가」하면 앱처럼 열려요.</li>
           </ul>
@@ -492,7 +494,7 @@ body.phone .pc-only { display: none !important; }
       <div class="row"><input type="text" id="fixedTags" placeholder="#동네이름 #내닉네임" style="flex:1"><button class="btn" id="saveTags">저장</button></div>
       <label class="small">네이버 카페 글쓰기 주소 (카페 글쓰기 화면 주소를 붙여 넣으세요)</label>
       <div class="row"><input type="text" id="cafeUrl" placeholder="https://cafe.naver.com/..." style="flex:1"><button class="btn" id="saveCafe">저장</button></div>
-      <div class="row" style="margin-top:12px"><button class="btn pc-only" id="openData"><svg class="i" data-i="folder"></svg>데이터 폴더 열기</button><button class="btn pc-only" id="mkLinks"><svg class="i" data-i="link"></svg>바탕 화면·시작 메뉴 바로가기 만들기</button>
+      <div class="row" style="margin-top:12px"><button class="btn pc-only" id="openData"><svg class="i" data-i="folder"></svg>데이터 폴더 열기</button><button class="btn pc-only win-only" id="mkLinks"><svg class="i" data-i="link"></svg>바탕 화면·시작 메뉴 바로가기 만들기</button>
         <span class="hint">올리기는 직접 해요 — 자동 발행은 계정 정지 위험이 있어 넣지 않았어요.</span></div>
     </div>
   </section>
@@ -578,7 +580,7 @@ body.phone .pc-only { display: none !important; }
         <h2><svg class="i" data-i="flag"></svg>처음 한 번만</h2>
         <ol>
           <li><b>Claude Code</b> 를 설치하고 터미널에서 <code>claude</code> 를 한 번 실행해 로그인해요. Codex·Gemini CLI·로컬 AI(Ollama)는 <b>설정 → AI 고르기</b>에서 바꿔요.</li>
-          <li>왼쪽 아래에 <b>초록 점</b>이 보이면 준비 끝. 처음 켜면 바탕 화면·시작 메뉴에 <b>글 도우미</b> 바로가기가 생겨요.</li>
+          <li>왼쪽 아래에 <b>초록 점</b>이 보이면 준비 끝. <span class="win-only">처음 켜면 바탕 화면·시작 메뉴에 <b>글 도우미</b> 바로가기가 생겨요.</span><span class="mac-only"><b>PostKit.app</b> 을 응용 프로그램 폴더로 옮기고 Dock 에 두면 편해요. 창을 닫았다가 바로 다시 켜지지 않으면 1분쯤 뒤에 다시 켜요.</span></li>
           <li><b>내 말투</b>에 직접 쓴 글을 3~5편 넣어 두면 훨씬 내 글 같아져요.</li>
           <li>네이버 카페에 올린다면 <b>설정</b>에 카페 글쓰기 주소를 넣어요.</li>
         </ol>
@@ -588,7 +590,7 @@ body.phone .pc-only { display: none !important; }
         <ol>
           <li><b>메모</b> — 직접 겪은 사실을 짧게. 막막하면 <b>틀</b>을 눌러 빈칸만 채워요. 비운 칸은 글에 안 들어가요.</li>
           <li><b>올릴 곳</b> 고르기 — 여러 개 골라도 한 번에 써요.</li>
-          <li><b>사진</b> — 끌어다 놓거나 <kbd>Ctrl</kbd>+<kbd>V</kbd>. AI 가 사진을 보고 글에 반영해요. 큰 사진은 줄이고, 찍은 날짜는 메모에 넣어요(원본은 그대로).</li>
+          <li><b>사진</b> — 끌어다 놓거나 <kbd class="win-only">Ctrl</kbd><kbd class="mac-only">⌘</kbd>+<kbd>V</kbd>. AI 가 사진을 보고 글에 반영해요. 큰 사진은 줄이고, 찍은 날짜는 메모에 넣어요(원본은 그대로).</li>
           <li><b>글 만들기</b> — 30초~1분. 플랫폼을 더 고르고 <b>새로 고른 곳만 만들기</b>로 추가할 수 있어요.</li>
           <li><b>다듬기</b> — 「짧게」「캐주얼하게」 버튼이나 말로 부탁해요. 직접 고쳐도 자동 저장돼요.</li>
           <li><b>복사 → 글쓰기 창</b> → 붙여 넣고 사진을 올린 뒤 <b>발행은 직접</b>.</li>
@@ -744,7 +746,9 @@ fetch("/api/ping");
 
 async function loadState() {
   const d = await api("/api/state");
-  S.platforms = d.platforms; S.config = d.config;
+  S.platforms = d.platforms; S.config = d.config; S.os = d.os || "win";
+  document.body.classList.remove("os-win", "os-mac", "os-other");
+  document.body.classList.add("os-" + S.os);                // .win-only · .mac-only 를 OS 에 맞춰 보인다
   const c = $("#claude");
   c.textContent = d.ai.ready ? d.ai.name : d.ai.name + " 없음";
   c.className = "claude" + (d.ai.ready ? "" : " bad");
@@ -1151,7 +1155,7 @@ async function loadData() {
     `<button class="btn" id="dataPick">${ic("folder")}다른 폴더 고르기</button>`;
   $("#dataBtns").querySelectorAll("[data-cloud]").forEach(b => b.onclick = () => moveData(d.clouds[+b.dataset.cloud].path, d.clouds[+b.dataset.cloud].name));
   $("#dataPick").onclick = async () => {
-    toast("폴더 고르기 창이 떴어요 — 안 보이면 작업 표시줄을 보세요.");
+    toast(S.os === "mac" ? "폴더 고르기 창이 떴어요 — 안 보이면 Dock 이나 다른 창 뒤를 보세요." : "폴더 고르기 창이 떴어요 — 안 보이면 작업 표시줄을 보세요.");
     const r = await api("/api/data/pick", {}).catch(e => { fail(e); return {}; });
     if (r.path) moveData(r.path, r.path);
   };

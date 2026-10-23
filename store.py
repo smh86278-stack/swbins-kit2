@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 """데이터 폴더 · 백업 · 성장 기록 — 화면(app.py)과 따로 시험할 수 있게 여기 모은다.
 
-데이터 폴더는 기본이 %APPDATA%\\PostKit. 「데이터 폴더 옮기기」를 하면 그 자리를 %APPDATA%\\PostKit\\location.json 에 적어 두고
+데이터 폴더는 기본이 %APPDATA%\\PostKit(맥은 ~/Library/Application Support/PostKit — default_dirs).
+「데이터 폴더 옮기기」를 하면 그 자리를 기본 폴더의 location.json 에 적어 두고
 다음부터 그 폴더를 쓴다(OneDrive 같은 곳에 두면 백업·여러 PC 공유가 저절로 된다).
 """
 import json
 import os
 import re
 import shutil
+import sys
 import zipfile
 from datetime import datetime
 
@@ -16,6 +18,27 @@ PHOTO_DIR = "photos"
 
 
 # ---------- 데이터 폴더 ----------
+
+def default_dirs(app="PostKit", environ=None, platform=None, home=None, fallback=""):
+    """(데이터, 로컬, 로그) 기본 폴더 — OS 마다.
+    윈도우: %APPDATA%\\PostKit · %LOCALAPPDATA%\\PostKit(자동 백업·창 프로필) · 로그도 로컬
+    맥: ~/Library/Application Support/PostKit · ~/Library/Application Support/PostKit-local · ~/Library/Logs/PostKit
+    그 밖(리눅스): ~/.local/share/PostKit · ~/.local/state/PostKit"""
+    environ = os.environ if environ is None else environ
+    platform = platform or sys.platform
+    home = home or os.path.expanduser("~")
+    if platform == "win32":
+        data = os.path.join(environ.get("APPDATA") or fallback or home, app)
+        local = os.path.join(environ.get("LOCALAPPDATA") or fallback or home, app)
+        return data, local, local
+    if platform == "darwin":
+        lib = os.path.join(home, "Library")
+        return (os.path.join(lib, "Application Support", app), os.path.join(lib, "Application Support", app + "-local"),
+                os.path.join(lib, "Logs", app))
+    share = environ.get("XDG_DATA_HOME") or os.path.join(home, ".local", "share")
+    state = environ.get("XDG_STATE_HOME") or os.path.join(home, ".local", "state")
+    return os.path.join(share, app), os.path.join(state, app), os.path.join(state, app)
+
 
 def load_location(home):
     """옮겨 둔 데이터 폴더(없으면 '')."""
@@ -72,9 +95,36 @@ def copy_data(src, dst):
     return n
 
 
-def cloud_folders():
-    """개인 OneDrive · 구글 드라이브 폴더(있는 것만). 회사 OneDrive 는 일부러 빼고 따로 알린다."""
+def _mac_cloud(home):
+    """맥 클라우드 폴더 — ~/Library/CloudStorage(OneDrive·구글 드라이브) · iCloud Drive. [(이름, 경로, 회사 OneDrive 인가)]"""
     out = []
+    cs = os.path.join(home, "Library", "CloudStorage")
+    for n in (sorted(os.listdir(cs)) if os.path.isdir(cs) else []):
+        p = os.path.join(cs, n)
+        if not os.path.isdir(p):
+            continue
+        if n == "OneDrive-Personal":
+            out.append(("OneDrive(개인)", p, False))
+        elif n.startswith("OneDrive-"):                 # OneDrive-<회사 이름> 은 회사 것
+            out.append(("OneDrive(회사)", p, True))
+        elif n.startswith("GoogleDrive-"):
+            for sub in ("내 드라이브", "My Drive"):
+                if os.path.isdir(os.path.join(p, sub)):
+                    out.append(("구글 드라이브", os.path.join(p, sub), False))
+    icloud = os.path.join(home, "Library", "Mobile Documents", "com~apple~CloudDocs")
+    if os.path.isdir(icloud):
+        out.append(("iCloud Drive", icloud, False))
+    return out
+
+
+def cloud_folders(platform=None, home=None):
+    """개인 OneDrive · 구글 드라이브(맥은 iCloud Drive 도) 폴더(있는 것만). 회사 OneDrive 는 일부러 빼고 따로 알린다."""
+    platform = platform or sys.platform
+    if platform == "darwin":
+        return [{"name": n, "path": p} for n, p, company in _mac_cloud(home or os.path.expanduser("~")) if not company]
+    out = []
+    if platform != "win32":
+        return out
     personal = os.environ.get("OneDriveConsumer") or ""
     if personal and os.path.isdir(personal):
         out.append({"name": "OneDrive(개인)", "path": personal})
@@ -86,7 +136,9 @@ def cloud_folders():
     return out
 
 
-def company_onedrive():
+def company_onedrive(platform=None, home=None):
+    if (platform or sys.platform) == "darwin":
+        return next((p for _, p, company in _mac_cloud(home or os.path.expanduser("~")) if company), "")
     return os.environ.get("OneDriveCommercial") or ""
 
 

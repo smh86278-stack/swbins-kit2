@@ -28,6 +28,33 @@ def make_data(root):
         f.write("x")
 
 
+class PlatformDirsTest(unittest.TestCase):
+    """기본 데이터 자리 — OS 마다(어느 OS 에서 돌려도 같은 답이 나오게 platform·home 을 넘긴다)."""
+
+    def test_windows(self):
+        env = {"APPDATA": os.path.join("C:", "R"), "LOCALAPPDATA": os.path.join("C:", "L")}
+        data, local, logs = store.default_dirs("PostKit", env, "win32", home="H")
+        self.assertEqual((data, local, logs), (os.path.join(env["APPDATA"], "PostKit"),) + (os.path.join(env["LOCALAPPDATA"], "PostKit"),) * 2)
+
+    def test_mac(self):
+        data, local, logs = store.default_dirs("PostKit", {}, "darwin", home="/Users/me")
+        self.assertEqual(data, os.path.join("/Users/me", "Library", "Application Support", "PostKit"))
+        self.assertEqual(local, os.path.join("/Users/me", "Library", "Application Support", "PostKit-local"))
+        self.assertEqual(logs, os.path.join("/Users/me", "Library", "Logs", "PostKit"))
+        self.assertNotEqual(data, local)             # 자동 백업이 데이터 폴더 안에 쌓이지 않게
+
+    def test_mac_cloud_folders(self):
+        with tempfile.TemporaryDirectory() as home:
+            cs = os.path.join(home, "Library", "CloudStorage")
+            for d in ("OneDrive-Personal", "OneDrive-회사", os.path.join("GoogleDrive-me@example.com", "내 드라이브")):
+                os.makedirs(os.path.join(cs, d))
+            os.makedirs(os.path.join(home, "Library", "Mobile Documents", "com~apple~CloudDocs"))
+            names = [c["name"] for c in store.cloud_folders("darwin", home)]
+            self.assertEqual(names, ["구글 드라이브", "OneDrive(개인)", "iCloud Drive"])      # 회사 OneDrive 는 빼고
+            self.assertTrue(store.company_onedrive("darwin", home).endswith("OneDrive-회사"))
+            self.assertEqual(store.cloud_folders("linux", home), [])
+
+
 class LocationTest(unittest.TestCase):
     def test_location_and_target(self):
         with tempfile.TemporaryDirectory() as home, tempfile.TemporaryDirectory() as cloud:

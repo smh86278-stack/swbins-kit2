@@ -5,10 +5,10 @@
 
 ## 1. 한눈에
 
-- **대상**: Windows PC 한 대, 사용자 한 명(블로거). 서버·클라우드·회원 가입 없이 그 PC 안에서 끝난다. AI 는 사용자가 이미 로그인해 둔 CLI 를 빌려 쓴다.
-- **형태**: `PostKit.exe` 하나(PyInstaller). 실행하면 로컬 HTTP 서버를 띄우고 Edge 를 앱 모드(`--app`, 전용 프로필)로 열어 창처럼 보인다.
+- **대상**: Windows PC 또는 Mac 한 대, 사용자 한 명(블로거). 서버·클라우드·회원 가입 없이 그 PC 안에서 끝난다. AI 는 사용자가 이미 로그인해 둔 CLI 를 빌려 쓴다.
+- **형태**: 윈도우 `PostKit.exe` 하나 · 맥 `PostKit.app`(PyInstaller). 실행하면 로컬 HTTP 서버를 띄우고 Edge(맥은 Chrome·Edge·Brave)를 앱 모드(`--app`, 전용 프로필)로 열어 창처럼 보인다. 플랫폼별 차이는 8절.
 - **언어·의존성**: 서버는 **파이썬 표준 라이브러리만**(`http.server`·`socketserver`·`subprocess`·`zipfile`). 사진 손질에만 Pillow. 화면은 외부 CDN 없는 `ui.html` 한 장(바닐라 JS).
-- **규모**: 파이썬 약 2,200줄(app 924 · gen 435 · qr 266 · ai 251 · store 215), 화면 1,500줄, 시험 5개 파일 45개.
+- **규모**: 파이썬 약 2,200줄(app 924 · gen 435 · qr 266 · ai 251 · store 215), 화면 1,500줄, 시험 5개 파일 49개.
 
 ```
 PostKit.exe ── app.main() ── ThreadingHTTPServer 127.0.0.1:8650 ──┬─ GET  /            ui.html (토큰 심어서)
@@ -30,7 +30,7 @@ PostKit.exe ── app.main() ── ThreadingHTTPServer 127.0.0.1:8650 ──�
 | QR | `qr.py` | 바이트 모드·오류 정정 M·버전 1~10 을 직접 구현 — 회사망에서 pip 가 막혀도 되게 |
 | 화면 | `ui.html` | 사이드바 탭 7개, 카드·표, AI 티 점검(`lint`)을 화면에서, 서식 복사(`copyRich`), 색 테마 4개(`data-theme`) |
 | 프롬프트 파일 | `prompts/*.md` · `platforms.json` · `templates.json` | 코드 수정 없이 플랫폼·메모 틀을 늘린다 |
-| 빌드 · 릴리스 | `build.py` · `release.py` · `make_icon.py` | 한 파일 exe · 태그 → GitHub 릴리스 + exe 첨부 |
+| 빌드 · 릴리스 | `build.py` · `release.py` · `make_icon.py` | 윈도우 한 파일 exe · 맥 .app(+zip) · 태그 → GitHub 릴리스 + exe 첨부 |
 
 ## 3. 데이터 흐름
 
@@ -92,9 +92,34 @@ PostKit.exe ── app.main() ── ThreadingHTTPServer 127.0.0.1:8650 ──�
 
 ## 7. 시험 전략
 
-- `python -m unittest discover tests` — 45개, 진짜 AI·네트워크를 부르지 않는다.
+- `python -m unittest discover tests` — 49개, 진짜 AI·네트워크를 부르지 않는다.
   - `test_gen` — 프롬프트 조립·결과 파싱·태그·협찬/공구 표기(조사)·개월 수·사진 손질(Pillow 없으면 건너뜀)
   - `test_ai` — 엔진별 명령줄·사진 첨부 방식을 **가짜 CLI 실행 파일**과 **가짜 Ollama HTTP 서버**로 확인
-  - `test_store` — 데이터 폴더 옮기기·백업·되살리기·성장 기록 / `test_qr` — QR 인코딩 / `test_release` — 릴리스 스크립트 인자·본문
-- CI: GitHub Actions `windows-latest` × 파이썬 3.10·3.12, Pillow 를 깔고 같은 명령.
+  - `test_store` — OS 별 기본 데이터 자리·맥 클라우드 폴더·데이터 폴더 옮기기·백업·되살리기·성장 기록 / `test_qr` — QR 인코딩 / `test_release` — 릴리스 스크립트 인자·본문
+- CI: GitHub Actions `windows-latest`·`macos-latest` × 파이썬 3.10·3.12, Pillow 를 깔고 같은 명령.
+  이어서 두 OS 에서 `build.py` 로 exe·.app 을 만들고, 소스와 빌드한 앱을 각각 창 없이 띄워 `tests/smoke.py` 가 `/api/state`·첫 화면·아이콘을 부르고
+  Playwright(크로미엄)로 첫 화면을 찍는다(스크린샷·`PostKit-mac.zip` 은 아티팩트).
 - 화면은 시험 데이터 폴더(`POSTKIT_DATA`)로 띄워 Playwright(msedge)로 세 테마 × 주요 탭 + 390px 폭을 찍어 콘솔 오류·가로 넘침을 본다(수동 절차).
+
+## 8. 플랫폼(윈도우 · 맥)
+
+코드는 한 벌이고, OS 가 갈리는 곳만 `sys.platform` 으로 나눈다(`app.IS_WIN`·`IS_MAC`, `gen.IS_MAC`, `store.default_dirs`).
+
+| 무엇 | 윈도우 | 맥 | 코드 |
+|---|---|---|---|
+| 데이터 · 로컬 · 로그 | `%APPDATA%\PostKit` · `%LOCALAPPDATA%\PostKit`(자동 백업·창 프로필·로그) | `~/Library/Application Support/PostKit` · `…/PostKit-local`(자동 백업·창 프로필) · `~/Library/Logs/PostKit` | `store.default_dirs` |
+| 앱 창 | Edge `--app` | Chrome → Edge → Brave `--app`(실행 파일을 직접 띄워 전용 프로필), 없으면 `webbrowser`(= `open`) 기본 브라우저 탭 | `app.app_browser`·`open_window` |
+| 폴더 열기 · 고르기 | `os.startfile` · PowerShell `FolderBrowserDialog` | `open` · `osascript` `choose folder` | `app.open_folder`·`pick_folder` |
+| 바로가기 | 처음 실행 때 바탕 화면·시작 메뉴 `.lnk` | 만들지 않음 — `.app` 을 응용 프로그램 폴더·Dock 에(도움말·README 안내) | `app.make_shortcuts` |
+| 클라우드 폴더 | `OneDriveConsumer` · 드라이브 문자 `X:\내 드라이브` · 회사 `OneDriveCommercial` | `~/Library/CloudStorage/OneDrive-Personal`·`GoogleDrive-*/내 드라이브`·iCloud Drive · 회사 `OneDrive-<회사>` | `store.cloud_folders`·`company_onedrive` |
+| AI CLI 찾기 | PATH(+`~/.local/bin`·`%APPDATA%\npm`), `.cmd` 는 `cmd.exe` 를 거쳐 띄움 | Finder 로 켠 앱은 PATH 가 `/usr/bin:/bin` 뿐 → 로그인 셸 PATH(`$SHELL -lc`, 5초 제한·한 번만) + `/opt/homebrew/bin`·`/usr/local/bin`·`~/.local/bin`·`~/.npm-global/bin`·nvm·volta·bun. 띄울 때도 넓힌 PATH 를 넘긴다(npm CLI 는 `env node`) | `gen.search_path`·`which`·`cli_env` |
+| CLI 멈추기(시간 초과) | `taskkill /T`(cmd → node 까지) | 새 세션으로 띄워 `killpg` | `ai._run_cli` |
+| 한글 파일 이름 | — | 사진 이름·글 폴더 이름을 NFC 로(맥은 자모를 푼 NFD 로 넘기기도 함) | `gen.nfc` |
+| 빌드 | `--onefile --noconsole` → `PostKit.exe` | `--windowed --onedir` → `PostKit.app`, `app.ico` → icns(Pillow), Info.plist `LSUIElement`(Dock 아이콘 없음) 후 임시 서명(`codesign -s -`), `ditto` 로 zip | `build.py` |
+
+맥의 한계(2026-10-23 기준):
+- 서명·공증 없음 → 처음 한 번 「열기」 허용(README). Apple Silicon 에서 빌드하므로 **arm64 전용**(인텔 맥은 소스로 실행).
+- 창을 닫은 뒤 45초 안에 다시 켜면 macOS 가 아직 도는 앱을 새로 띄우지 않아 창이 안 뜬다(윈도우는 두 번째 실행이 창만 하나 더 연다). 잠시 뒤 다시 켜면 된다.
+- 기본 브라우저 탭으로 열리는 경우(크로미엄 브라우저가 없을 때) 탭을 닫아야 서버가 끝난다.
+- 릴리스(`release.py`)는 아직 윈도우 exe 만 올린다. 맥 zip 을 같이 올리려면 맥에서 빌드한 `dist/PostKit-mac.zip` 이 필요하니,
+  CI(맥) 아티팩트를 받아 같은 릴리스에 두 번째 첨부로 올리는 단계(`--mac-zip <파일>` 같은 인자)를 더하는 방식이 맞다.

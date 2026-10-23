@@ -5,9 +5,11 @@
 
 - 화면은 127.0.0.1 에만 연다. 상태를 바꾸는 POST 는 띄울 때마다 새로 만드는 토큰(X-Token)이 있어야 한다.
   「폰에서 쓰기」를 켰을 때만 집 네트워크 주소에 따로 연다(PIN → 세션 쿠키, PC 를 건드리는 길은 막음 — PhoneHandler).
-- 창은 Edge --app(따로 둔 프로필). 창이 닫혀 신호(/api/ping)가 끊기면 서버도 스스로 끝난다.
-- 데이터는 %APPDATA%\\PostKit (config.json · voice\\*.txt · posts\\<글>\\ · campaigns.json · ledger.json).
-  설정에서 OneDrive 같은 곳으로 옮길 수 있고(store.py), 하루 한 번 사진 빼고 %LOCALAPPDATA%\\PostKit\\backups 에 자동 백업.
+- 창은 Edge --app(따로 둔 프로필, 맥은 Chrome·Edge·Brave --app → 없으면 기본 브라우저).
+  창이 닫혀 신호(/api/ping)가 끊기면 서버도 스스로 끝난다.
+- 데이터는 %APPDATA%\\PostKit(맥 ~/Library/Application Support/PostKit — store.default_dirs)
+  (config.json · voice\\*.txt · posts\\<글>\\ · campaigns.json · ledger.json).
+  설정에서 OneDrive 같은 곳으로 옮길 수 있고(store.py), 하루 한 번 사진 빼고 로컬 폴더(LOCALDATA)\\backups 에 자동 백업.
 - 올리기는 사람이 한다 — 여기선 복사와 글쓰기 창 열기까지만.
 """
 import http.server
@@ -35,10 +37,12 @@ import store
 APP = "PostKit"
 PORT = 8650
 IS_WIN = sys.platform == "win32"
+IS_MAC = sys.platform == "darwin"
+OS = "win" if IS_WIN else "mac" if IS_MAC else "other"
 HERE = os.path.dirname(os.path.abspath(__file__))
 # 기본 데이터 자리 — 데이터 폴더를 옮기면 여기 location.json 에 새 자리를 적는다. 시험할 땐 POSTKIT_DATA 로 따로
-HOME = os.environ.get("POSTKIT_DATA") or os.path.join(os.environ.get("APPDATA") or HERE, APP)
-LOCALDATA = os.path.join(os.environ.get("LOCALAPPDATA") or HERE, APP)
+_DATA, LOCALDATA, LOGDIR = store.default_dirs(APP, fallback=HERE)      # 윈도우 %APPDATA%·%LOCALAPPDATA%, 맥 ~/Library/…
+HOME = os.environ.get("POSTKIT_DATA") or _DATA
 BACKUPS = os.path.join(HOME, "_backups") if os.environ.get("POSTKIT_DATA") else os.path.join(LOCALDATA, "backups")
 
 
@@ -66,8 +70,8 @@ STARTED = time.time()
 
 def log(*a):
     try:
-        os.makedirs(LOCALDATA, exist_ok=True)
-        with open(os.path.join(LOCALDATA, "app.log"), "a", encoding="utf-8") as f:
+        os.makedirs(LOGDIR, exist_ok=True)
+        with open(os.path.join(LOGDIR, "app.log"), "a", encoding="utf-8") as f:
             f.write("%s %s\n" % (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), " ".join(str(x) for x in a)))
     except OSError:
         pass
@@ -302,7 +306,8 @@ def open_folder(path):
 
 
 def make_shortcuts():
-    """시작 메뉴·바탕 화면에 '글 도우미' 바로가기(지금 exe 를 가리킨다). 만든 곳 목록, 실패면 []."""
+    """시작 메뉴·바탕 화면에 '글 도우미' 바로가기(지금 exe 를 가리킨다). 만든 곳 목록, 실패면 [].
+    맥은 만들지 않는다 — PostKit.app 을 응용 프로그램 폴더로 옮겨 Dock 에 두면 된다(도움말에 안내)."""
     if not IS_WIN:
         return []
     exe = sys.executable
@@ -359,7 +364,15 @@ def daily_backup():
 
 
 def pick_folder():
-    """윈도우 폴더 고르기 창(PC 화면에 뜬다). 고른 경로, 취소면 ''."""
+    """폴더 고르기 창(PC 화면에 뜬다 — 윈도우 FolderBrowserDialog, 맥 osascript choose folder). 고른 경로, 취소면 ''."""
+    if IS_MAC:
+        script = ('POSIX path of (choose folder with prompt "글 도우미 데이터를 둘 폴더를 고르세요 '
+                  '(iCloud Drive·OneDrive·구글 드라이브 폴더 추천)" default location (path to home folder))')
+        try:
+            p = subprocess.run(["osascript", "-e", script], capture_output=True, timeout=600)
+            return p.stdout.decode("utf-8", "replace").strip().rstrip("/") if p.returncode == 0 else ""
+        except (OSError, subprocess.TimeoutExpired):
+            return ""
     if not IS_WIN:
         return ""
     ps = ("Add-Type -AssemblyName System.Windows.Forms; [Console]::OutputEncoding = [Text.Encoding]::UTF8; "
@@ -434,15 +447,31 @@ def compose_growth(picked):
     return os.path.basename(d)
 
 
-def open_window(url):
-    """Edge 앱 창(따로 둔 프로필). 없으면 기본 브라우저."""
+def app_browser():
+    """앱 창으로 띄울 크로미엄 브라우저 실행 파일(없으면 None). 윈도우 Edge, 맥 Chrome → Edge → Brave."""
     if IS_WIN:
         cands = [os.path.join(b, "Microsoft", "Edge", "Application", "msedge.exe")
                  for b in (os.environ.get("ProgramFiles(x86)"), os.environ.get("ProgramFiles"), os.environ.get("LOCALAPPDATA")) if b]
-        exe = next((c for c in cands if os.path.isfile(c)), None)
-        if exe:
-            subprocess.Popen([exe, "--app=" + url, "--user-data-dir=" + os.path.join(LOCALDATA, "edge"), "--window-size=1180,820"])
+    elif IS_MAC:
+        apps = [("Google Chrome", "Google Chrome"), ("Microsoft Edge", "Microsoft Edge"), ("Brave Browser", "Brave Browser")]
+        cands = [os.path.join(root, a + ".app", "Contents", "MacOS", b)
+                 for a, b in apps for root in ("/Applications", os.path.expanduser("~/Applications"))]
+    else:
+        cands = []
+    return next((c for c in cands if os.path.isfile(c)), None)
+
+
+def open_window(url):
+    """앱 창(따로 둔 프로필 — 평소 브라우저와 섞이지 않게). 없으면 기본 브라우저(맥은 open 과 같다)."""
+    exe = app_browser()
+    if exe:
+        try:
+            subprocess.Popen([exe, "--app=" + url, "--user-data-dir=" + os.path.join(LOCALDATA, "edge" if IS_WIN else "browser"),
+                              "--window-size=1180,820", "--no-first-run", "--no-default-browser-check"],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             return
+        except OSError as e:
+            log("앱 창 실패", e)
     webbrowser.open(url)
 
 
@@ -515,7 +544,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 voice = sorted(n for n in os.listdir(VOICE) if n.endswith(".txt")) if os.path.isdir(VOICE) else []
                 return self.send(200, {"ai": ai.status(cfg, full=False),
                                        "platforms": platforms(), "config": cfg, "templates": gen.load_templates(),
-                                       "frozen": FROZEN,
+                                       "frozen": FROZEN, "os": OS,
                                        "voice": [{"name": n, "text": read_text(os.path.join(VOICE, n))} for n in voice]})
             if u.path == "/api/ai":                     # ⚙️ 설정의 AI 고르기 — 엔진마다 깔렸는지·사진 보는지
                 return self.send(200, ai.status(load_cfg()))
@@ -583,7 +612,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         try:
             if u.path == "/api/photo":                  # 사진 한 장 — 몸통이 파일 그대로
                 d = post_path(q.get("name", ""))
-                n = os.path.basename(q.get("file", ""))
+                n = gen.nfc(os.path.basename(q.get("file", "")))
                 if not NAME_RE.match(n) or not n.lower().endswith(gen.PHOTO_EXT):
                     raise ValueError("사진 파일(jpg·png·webp·gif)만 넣을 수 있습니다.")
                 data = self.body_bytes()
@@ -708,6 +737,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     phone_stop()
                 return self.send(200, phone_status())
             if u.path == "/api/shortcuts":
+                if not IS_WIN:
+                    raise ValueError("맥에서는 PostKit.app 을 응용 프로그램 폴더로 옮기고 Dock 에 두세요.")
                 if not FROZEN:
                     raise ValueError("바로가기는 PostKit.exe 로 실행했을 때만 만들 수 있어요.")
                 made = make_shortcuts()

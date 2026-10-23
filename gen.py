@@ -9,9 +9,11 @@ import re
 import shutil
 import subprocess
 import sys
+import unicodedata
 from datetime import datetime
 
 IS_WIN = sys.platform == "win32"
+IS_MAC = sys.platform == "darwin"
 CREATE_NO_WINDOW = 0x08000000
 RES = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))     # platforms.json·prompts 가 있는 곳(exe 면 풀린 임시 폴더)
 
@@ -33,16 +35,60 @@ def read_prompt(name):
         return f.read().strip()
 
 
+_LOGIN_PATH = []          # 맥: 로그인 셸이 아는 PATH(한 번만 물어 둔다)
+
+
+def _login_shell_path():
+    """맥에서 Finder 로 켠 앱은 PATH 가 /usr/bin:/bin 뿐이다 — 로그인 셸(zsh -l)에게 PATH 를 한 번 물어 둔다."""
+    if _LOGIN_PATH:
+        return _LOGIN_PATH[0]
+    out = ""
+    if IS_MAC:
+        try:
+            p = subprocess.run([os.environ.get("SHELL") or "/bin/zsh", "-lc", 'printf "%s" "$PATH"'],
+                               capture_output=True, timeout=5, stdin=subprocess.DEVNULL)
+            out = p.stdout.decode("utf-8", "replace").strip().splitlines()[-1] if p.returncode == 0 and p.stdout.strip() else ""
+        except (OSError, subprocess.TimeoutExpired, IndexError):
+            out = ""
+    _LOGIN_PATH.append(out)
+    return out
+
+
+def extra_dirs():
+    """PATH 에 없더라도 CLI(claude·codex·gemini — npm·brew·설치 스크립트)가 흔히 깔리는 곳."""
+    home = os.path.expanduser("~")
+    dirs = [os.path.join(home, ".local", "bin"), os.path.join(home, ".claude", "local")]
+    if IS_WIN:
+        dirs.append(os.path.join(os.environ.get("APPDATA") or os.path.join(home, "AppData", "Roaming"), "npm"))
+    else:
+        dirs += ["/opt/homebrew/bin", "/usr/local/bin", os.path.join(home, ".npm-global", "bin"),
+                 os.path.join(home, ".volta", "bin"), os.path.join(home, ".bun", "bin"), os.path.join(home, "n", "bin")]
+        nvm = os.path.join(home, ".nvm", "versions", "node")
+        if os.path.isdir(nvm):          # nvm 은 버전별 폴더 — 새 버전부터
+            dirs += [os.path.join(nvm, v, "bin") for v in sorted(os.listdir(nvm), reverse=True)]
+    return dirs
+
+
+def search_path():
+    """CLI 를 찾을 PATH — 지금 PATH → (맥) 로그인 셸 PATH → 흔히 깔리는 곳. 겹치면 앞의 것만."""
+    parts = (os.environ.get("PATH") or "").split(os.pathsep) + _login_shell_path().split(":" if IS_MAC else os.pathsep) + extra_dirs()
+    return os.pathsep.join(dict.fromkeys(p for p in parts if p))
+
+
+def which(name):
+    return shutil.which(name, path=search_path())
+
+
+def cli_env():
+    """CLI 를 띄울 환경 — PATH 를 넓혀 둔다(npm 으로 깐 CLI 는 `#!/usr/bin/env node` 라 node 도 찾혀야 한다)."""
+    env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
+    env["PATH"] = search_path()
+    return env
+
+
 def find_claude():
     """claude 실행 명령(목록). 없으면 None."""
-    path = shutil.which("claude")
-    if not path:
-        home = os.path.expanduser("~")
-        for c in (os.path.join(home, ".local", "bin", "claude.exe" if IS_WIN else "claude"),
-                  os.path.join(home, ".claude", "local", "claude")):
-            if os.path.isfile(c):
-                path = c
-                break
+    path = which("claude")
     return [path] if path else None
 
 
@@ -394,7 +440,7 @@ def run(prompt, workdir, resume_id=None, timeout=300, model=""):
     kw = {"creationflags": CREATE_NO_WINDOW} if IS_WIN else {}
     try:
         p = subprocess.run(args, input=prompt.encode("utf-8"), cwd=workdir, capture_output=True,
-                           timeout=timeout, **kw)
+                           timeout=timeout, env=cli_env(), **kw)
     except subprocess.TimeoutExpired:
         return {"text": "", "session_id": "", "error": "시간이 너무 오래 걸려 멈췄습니다(%d초)." % timeout}
     except OSError as e:
@@ -407,7 +453,13 @@ def run(prompt, workdir, resume_id=None, timeout=300, model=""):
     return r
 
 
+def nfc(s):
+    """맥은 파일 이름 한글을 자모로 풀어(NFD) 넘기기도 한다 — 저장·비교 전에 붙인 꼴(NFC)로."""
+    return unicodedata.normalize("NFC", s or "")
+
+
 def safe_slug(s, n=12):
+    s = nfc(s)
     s = re.sub(r"[^0-9A-Za-z가-힣]+", "-", (s or "").strip().splitlines()[0] if (s or "").strip() else "")
     s = s.strip("-")
     cut = s[:n]

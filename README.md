@@ -1,7 +1,7 @@
 # 글 도우미 (PostKit)
 
 [![test](https://github.com/smh86278-stack/swbins-kit2/actions/workflows/test.yml/badge.svg)](https://github.com/smh86278-stack/swbins-kit2/actions/workflows/test.yml)
-![platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue)
+![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-blue)
 ![python](https://img.shields.io/badge/python-3.10%2B-blue)
 
 **체험단·육아 블로거를 위한 글쓰기 데스크톱 앱 — 사진과 메모를 넣으면 네이버 블로그·카페·인스타그램·틱톡 글을 내 말투로 써 주고, 캠페인 조건·마감·수익 장부까지 챙긴다.** 올리기는 사람이 직접 한다. — [English summary](README.en.md)
@@ -43,12 +43,25 @@
 
 ## 설치
 
-Windows 10/11 · Microsoft Edge(기본 설치됨).
+**Windows 10/11**(Microsoft Edge — 기본 설치됨) 또는 **macOS**(Apple Silicon. Chrome·Edge·Brave 가 있으면 앱 창, 없으면 기본 브라우저 탭).
 
 1. 글을 써 줄 AI 하나를 이 PC 에서 로그인해 둔다 — 기본은 [Claude Code](https://claude.com/claude-code)(`claude` 를 한 번 실행해 로그인).
    **설정 → AI 고르기**에서 Codex(ChatGPT) · Gemini CLI · 로컬 Ollama 로 바꿀 수 있다(아래 표).
 2. [Releases](https://github.com/smh86278-stack/swbins-kit2/releases) 에서 `PostKit.exe` 를 받아 실행한다. 설치 과정 없이 앱 창(Edge 앱 모드)이 뜨고,
    처음 한 번 바탕 화면·시작 메뉴 바로가기를 만든다. 창을 닫으면 잠시 뒤 스스로 끝난다.
+
+### 맥에서
+
+1. `PostKit-mac.zip` 을 받아 풀고 `PostKit.app` 을 **응용 프로그램** 폴더로 옮긴다(지금은 GitHub Actions 의 `PostKit-mac` 아티팩트 — 릴리스에는 아직 없다).
+2. **처음 한 번만** — 서명·공증을 하지 않은 앱이라 macOS 가 막는다.
+   - macOS 14 이하: `PostKit.app` 을 **우클릭(Control+클릭) → 열기 → 열기**.
+   - macOS 15 이상: 한 번 더블클릭해 막힌 뒤 **시스템 설정 → 개인정보 보호 및 보안** 맨 아래 「그래도 열기」 → 암호.
+   - 그래도 안 되면 터미널에서 `xattr -dr com.apple.quarantine /Applications/PostKit.app`.
+3. 앱 창이 뜬다(Dock 에는 아이콘이 없다 — 뒤에서 서버만 돈다). 창을 닫으면 1분쯤 뒤 스스로 끝나고, 그 사이 다시 켜면 아무 일도 없을 수 있으니 잠시 뒤 다시 켠다.
+4. AI CLI 는 터미널에서 설치·로그인한다 — 예: [Homebrew](https://brew.sh) → `brew install node` → `npm install -g @anthropic-ai/claude-code` → `claude`.
+   Finder 로 켠 앱은 PATH 가 짧지만, 앱이 로그인 셸 PATH 와 `/opt/homebrew/bin`·`/usr/local/bin`·`~/.local/bin`·`~/.npm-global/bin`·nvm 폴더까지 찾아본다.
+5. 데이터는 `~/Library/Application Support/PostKit`, 로그는 `~/Library/Logs/PostKit/app.log`, 자동 백업은 `~/Library/Application Support/PostKit-local/backups`.
+   설정의 「데이터 폴더 옮기기」에 iCloud Drive·OneDrive·구글 드라이브(`~/Library/CloudStorage`)가 보인다.
 
 | AI | 준비 | 사진 | 다듬기 |
 |---|---|---|---|
@@ -78,7 +91,7 @@ Windows 10/11 · Microsoft Edge(기본 설치됨).
 
 ```mermaid
 flowchart LR
-  UI["ui.html<br/>(바닐라 JS, Edge 앱 창)"] -- "fetch · X-Token" --> APP["app.py<br/>HTTP 서버 127.0.0.1:8650"]
+  UI["ui.html<br/>(바닐라 JS, Edge·Chrome 앱 창)"] -- "fetch · X-Token" --> APP["app.py<br/>HTTP 서버 127.0.0.1:8650"]
   PHONE["폰 브라우저"] -- "PIN → 세션 쿠키" --> PH["PhoneHandler<br/>LAN :8653 (켤 때만)"]
   PH --> APP
   APP --> GEN["gen.py<br/>프롬프트 조립 · 결과 파싱 · 사진 손질"]
@@ -87,7 +100,7 @@ flowchart LR
   AI -- "stdin 프롬프트" --> CLI["claude -p · codex exec · gemini -p"]
   AI -- "127.0.0.1:11434" --> OLL["Ollama"]
   APP --> STORE["store.py<br/>데이터 폴더 · 백업 · 성장 기록"]
-  STORE --> DATA[("%APPDATA%\PostKit<br/>config · voice · posts · campaigns · ledger")]
+  STORE --> DATA[("%APPDATA%\PostKit · ~/Library/Application Support/PostKit<br/>config · voice · posts · campaigns · ledger")]
 ```
 
 서버는 파이썬 표준 라이브러리(`http.server`)만 쓰고, 사진 손질에만 Pillow 를 쓴다. 화면은 외부 CDN 없이 `ui.html` 한 장.
@@ -107,7 +120,7 @@ flowchart LR
 - **사진 위치 정보 지움** — 앱에 넣은 사진에 GPS 가 있으면 작은 사진이라도 다시 저장해 EXIF 를 버린다. 원본 사진은 건드리지 않는다.
 - **아이 정보** — 설정에 애칭을 넣으면 글에는 애칭만 쓰고 실명·생년월일·병원·어린이집·동네는 빼라는 규칙을 프롬프트에 붙인다. 생일은 개월 수 계산에만 쓴다.
 - **경로 탈출 차단** — 글·사진·말투 파일 이름은 정규식과 `gen.inside()`(데이터 폴더 밖이면 거부)로 확인. 요청 본문은 JSON 2MB · 파일 30MB 까지.
-- **회사 OneDrive 경고** — 회사 OneDrive(`OneDriveCommercial`)가 있는 PC 면 데이터 설정 칸에 "개인 부업 자료를 두지 말라"는 경고를 띄운다.
+- **회사 OneDrive 경고** — 회사 OneDrive(윈도우 `OneDriveCommercial`, 맥 `~/Library/CloudStorage/OneDrive-<회사>`)가 있는 PC 면 데이터 설정 칸에 "개인 부업 자료를 두지 말라"는 경고를 띄운다.
 
 ## 원칙
 
@@ -121,17 +134,18 @@ flowchart LR
 
 ```
 python -m pip install pillow          (사진 시험용 — 없으면 그 시험만 건너뛴다)
-python -m unittest discover tests     45개 — 프롬프트·파싱·협찬 표기·사진 손질·AI 엔진(가짜 CLI·가짜 Ollama 서버)·저장소·QR·릴리스 스크립트
+python -m unittest discover tests     49개 — 플랫폼별 데이터 자리·프롬프트·파싱·협찬 표기·사진 손질·AI 엔진(가짜 CLI·가짜 Ollama 서버)·저장소·QR·릴리스 스크립트
 ```
 
-진짜 AI 는 부르지 않는다. GitHub Actions 가 `windows-latest` 에서 파이썬 3.10·3.12 로 같은 시험을 돌린다(`.github/workflows/test.yml`).
+진짜 AI 는 부르지 않는다. GitHub Actions 가 `windows-latest`·`macos-latest` × 파이썬 3.10·3.12 로 같은 시험을 돌리고,
+두 OS 에서 빌드(exe·.app)한 앱을 창 없이 띄워 화면·API 스모크 시험(`tests/smoke.py`, Playwright 스크린샷)까지 한다(`.github/workflows/test.yml`).
 
 개발 중 앱 띄우기 — 시험 데이터를 분리해서:
 
 ```
 set POSTKIT_DATA=%TEMP%\postkit-test
 python -X utf8 -c "import app; app.PORT=8651; app.main()" --no-window
-python build.py                       dist\PostKit.exe (PyInstaller 한 파일)
+python build.py                       윈도우 dist\PostKit.exe (한 파일) · 맥 dist/PostKit.app + PostKit-mac.zip
 ```
 
 ## 라이선스

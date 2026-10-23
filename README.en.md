@@ -17,7 +17,7 @@
 
 ## Architecture in one paragraph
 
-A single `PostKit.exe` (PyInstaller) starts a standard-library `http.server` on `127.0.0.1` and opens Edge in app mode. `ui.html` is one vanilla-JS page with no CDN. `gen.py` builds prompts and post-processes results, `ai.py` drives whichever CLI the user is already logged into (Claude Code, Codex, Gemini CLI) or a local Ollama, and `store.py` keeps everything as plain files in a data folder that can live in OneDrive. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (Korean).
+A single `PostKit.exe` on Windows or `PostKit.app` on macOS (PyInstaller) starts a standard-library `http.server` on `127.0.0.1` and opens Edge (Chrome/Edge/Brave on macOS, falling back to the default browser) in app mode. `ui.html` is one vanilla-JS page with no CDN. `gen.py` builds prompts and post-processes results, `ai.py` drives whichever CLI the user is already logged into (Claude Code, Codex, Gemini CLI) or a local Ollama, and `store.py` keeps everything as plain files in a data folder that can live in OneDrive. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (Korean).
 
 ## Security highlights (all in code)
 

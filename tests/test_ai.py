@@ -10,6 +10,7 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest import mock
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -206,9 +207,22 @@ class CliTest(unittest.TestCase):
     def test_missing_cli(self):
         old = os.environ["PATH"]
         os.environ["PATH"] = BIN + "-없음"
+        try:        # 흔히 깔리는 곳·로그인 셸 PATH 도 비워야 이 PC 에 진짜 CLI 가 있어도 '없음'이 된다
+            with mock.patch.object(gen, "extra_dirs", return_value=[]), mock.patch.object(gen, "_login_shell_path", return_value=""):
+                self.assertIn("npm install -g @openai/codex", ai.not_ready(S("codex")))
+                self.assertIn("찾지 못했어요", ai.run(S("gemini"), "p", DATA)["error"])
+        finally:
+            os.environ["PATH"] = old
+
+    def test_finds_cli_outside_path(self):
+        """맥에서 Finder 로 켠 앱은 PATH 가 짧다 — 흔히 깔리는 곳(/opt/homebrew/bin·~/.npm-global/bin 등)에서도 찾고, 띄울 때 PATH 에 넣는다."""
+        old = os.environ["PATH"]
+        os.environ["PATH"] = BIN + "-없음"
         try:
-            self.assertIn("npm install -g @openai/codex", ai.not_ready(S("codex")))
-            self.assertIn("찾지 못했어요", ai.run(S("gemini"), "p", DATA)["error"])
+            with mock.patch.object(gen, "extra_dirs", return_value=[BIN]), mock.patch.object(gen, "_login_shell_path", return_value=""):
+                self.assertTrue(ai.exe("codex")[0].startswith(BIN))
+                self.assertIn(BIN, gen.cli_env()["PATH"].split(os.pathsep))
+                self.assertEqual(ai.run(S("codex"), "p", make_post(photos=()))["text"], "코덱스 글")
         finally:
             os.environ["PATH"] = old
 

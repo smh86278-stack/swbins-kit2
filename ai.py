@@ -31,10 +31,10 @@ import gen
 
 ENGINES = ("claude", "codex", "gemini", "ollama")
 NAMES = {"claude": "Claude Code", "codex": "Codex (ChatGPT)", "gemini": "Gemini CLI", "ollama": "로컬 AI (Ollama)"}
-INSTALL = {"claude": "Claude Code 설치(npm install -g @anthropic-ai/claude-code) → 명령 창에서 claude 를 한 번 실행해 로그인",
-           "codex": "npm install -g @openai/codex → 명령 창에서 codex login (ChatGPT 계정)",
-           "gemini": "npm install -g @google/gemini-cli → 명령 창에서 gemini 를 한 번 실행해 구글 계정으로 로그인",
-           "ollama": "https://ollama.com 에서 받아 설치 → 명령 창에서 ollama pull qwen3:8b"}
+INSTALL = {"claude": "Claude Code 설치(npm install -g @anthropic-ai/claude-code) → 명령 창(맥은 터미널)에서 claude 를 한 번 실행해 로그인",
+           "codex": "npm install -g @openai/codex → 명령 창(맥은 터미널)에서 codex login (ChatGPT 계정)",
+           "gemini": "npm install -g @google/gemini-cli → 명령 창(맥은 터미널)에서 gemini 를 한 번 실행해 구글 계정으로 로그인",
+           "ollama": "https://ollama.com 에서 받아 설치 → 명령 창(맥은 터미널)에서 ollama pull qwen3:8b"}
 PHOTOS = {"claude": "사진 봐요", "codex": "사진 봐요(파일 첨부)", "gemini": "사진 봐요(파일 읽기 도구 — 버전에 따라 안 될 수 있어요)",
           "ollama": "비전 모델(gemma3·qwen2.5vl·llava 등)일 때만 사진 봐요 — qwen3 같은 글 전용 모델은 메모만으로 써요"}
 OLLAMA_URL = "http://127.0.0.1:11434"          # 이 PC 안에서만. 시험은 이 값을 가짜 서버로 바꾼다
@@ -65,7 +65,7 @@ def exe(engine):
     """CLI 실행 파일(목록). npm 으로 깔면 codex.cmd 처럼 .cmd 다. 없으면 None."""
     if engine == "claude":
         return gen.find_claude()
-    path = shutil.which(engine)
+    path = gen.which(engine)          # 맥 앱은 PATH 가 짧아서 흔히 깔리는 곳까지 본다
     return [path] if path else None
 
 
@@ -159,20 +159,23 @@ def _fail(msg):
 
 
 def _run_cli(argv, prompt, cwd, timeout, name):
-    kw = {"creationflags": gen.CREATE_NO_WINDOW} if gen.IS_WIN else {}
-    env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
+    # 윈도우는 콘솔 창 없이, 맥·리눅스는 새 프로세스 그룹으로(멈추면 node 자식까지 같이 끈다)
+    kw = {"creationflags": gen.CREATE_NO_WINDOW} if gen.IS_WIN else {"start_new_session": True}
     try:
         p = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                             cwd=cwd, env=env, shell=_shell(argv[0]), **kw)
+                             cwd=cwd, env=gen.cli_env(), shell=_shell(argv[0]), **kw)
     except OSError as e:
         return None, "%s 를 띄우지 못했어요: %s" % (name, e)
     try:
         out, err = p.communicate(prompt.encode("utf-8"), timeout=timeout)
     except subprocess.TimeoutExpired:
         if gen.IS_WIN:      # .cmd 면 cmd.exe 아래 node 까지 같이 끈다
-            subprocess.run(["taskkill", "/T", "/F", "/PID", str(p.pid)], capture_output=True, **kw)
+            subprocess.run(["taskkill", "/T", "/F", "/PID", str(p.pid)], capture_output=True, creationflags=gen.CREATE_NO_WINDOW)
         else:
-            p.kill()
+            try:
+                os.killpg(p.pid, 9)
+            except OSError:
+                p.kill()
         p.communicate()
         return None, "시간이 너무 오래 걸려 멈췄습니다(%d초)." % timeout
     if p.returncode != 0:

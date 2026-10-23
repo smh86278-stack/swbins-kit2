@@ -1,6 +1,6 @@
 # swbins-kit2 — 글 도우미 (개인 부업용 글쓰기 응용프로그램)
 
-사진·메모를 넣으면 블로그·카페·인스타·틱톡용 글을 **내 말투로** 써 주고 다듬어 주는 윈도우 응용프로그램(`PostKit.exe` 하나).
+사진·메모를 넣으면 블로그·카페·인스타·틱톡용 글을 **내 말투로** 써 주고 다듬어 주는 응용프로그램 — 윈도우 `PostKit.exe` 하나, 맥 `PostKit.app`(2026-10-23 맥 지원 추가, 아래 「맥 지원」).
 **올리는 건 사람이 한다** — 자동 발행·자동 로그인·브라우저 조작은 이 저장소에 넣지 않는다(네이버 약관·계정 정지 위험, 2026-10-19 사용자 결정).
 
 > 이 파일이 **정본**이다. 다른 PC 의 Claude Code 도 이 파일만 읽으면 이어서 할 수 있게 적는다 — 상태가 바뀌면 여기 「지금 상태」를 고친다.
@@ -25,6 +25,13 @@
 2. 진짜 아이폰으로 폰에서 쓰기(집 와이파이) — 시험 브라우저로만 확인
 3. 말투가 얼마나 비슷한지, AI 티 점검 기준이 적당한지
 
+**맥 지원**(2026-10-23, 이 PC 는 윈도우라 맥 빌드·시험은 GitHub Actions `macos-latest` 로만 했다):
+- OS 가 갈리는 곳은 `docs/ARCHITECTURE.md` 8절 표가 정본 — 데이터 `~/Library/Application Support/PostKit`(로컬 `…/PostKit-local`, 로그 `~/Library/Logs/PostKit`),
+  앱 창 Chrome·Edge·Brave `--app`(없으면 기본 브라우저), 폴더 고르기 `osascript`, 바로가기 없음, 클라우드 `~/Library/CloudStorage`·iCloud,
+  CLI 찾기는 로그인 셸 PATH + 흔한 설치 폴더(`gen.search_path`), 한글 파일 이름 NFC.
+- 빌드는 맥에서 `python build.py` → `dist/PostKit.app` + `dist/PostKit-mac.zip`(서명·공증 없음, arm64). CI 의 `build` 작업이 만들어 `PostKit-mac` 아티팩트로 14일 올려 둔다. 릴리스엔 아직 안 올림.
+- **진짜 맥에서 아직 확인 못 한 것**: 처음 열기(Gatekeeper)·Chrome 앱 창이 뜨는지·폴더 고르기 창·Finder 로 켰을 때 claude 찾기·사진 끌어 놓기/⌘V·서식 복사·폰에서 쓰기 방화벽 묻기·창 닫은 뒤 다시 켜기.
+
 **사용자 결정·취향**(다시 묻지 말 것):
 - 쓰는 사람은 일단 나만 → AI 는 각 CLI 로그인(기본 Claude Code, 2026-10-23 부터 Codex·Gemini CLI·로컬 Ollama 도 고를 수 있음). API 키 방식은 쓰지 않는다(판매판 때 다시).
 - 부업 방향: **체험단·협찬·공구** + **쌍둥이 아기 육아 일상** 글. 카카오 쪽은 "잘 모르겠으니 패스".
@@ -43,13 +50,13 @@ ui.html           화면 전부(바닐라 JS, 외부 CDN 없음). 색은 키트(
                   — <html data-theme> basic(기본, 흰+파랑)·navy(진한 사이드바)·dark·pastel(예전 모양), 고른 값은 localStorage "theme"(창마다)
                   아이콘은 IC 표의 선(stroke) SVG(<svg class="i" data-i="이름"> / JS 에선 ic("이름")) — 탭·단추에 이모지를 다시 넣지 말 것
 docs\             ARCHITECTURE.md(설계 설명) · images\ui-<탭>-<테마>.png(README 스크린샷 — 견본 데이터는 가상, 경로·이름 같은 개인 정보 없게)
-.github\workflows\test.yml   windows-latest × 파이썬 3.10·3.12, Pillow 깔고 unittest (private 저장소라 배지는 남에게 안 보일 수 있음)
+.github\workflows\test.yml   unittest: windows·macos × 파이썬 3.10·3.12 / build: 두 OS 에서 build.py → tests\smoke.py(소스·빌드한 앱을 창 없이 띄워 API·첫 화면 + Playwright 스크린샷), 맥 zip 아티팩트
 prompts\*.md      base(공통 규칙·뻔한 표현 목록) + 플랫폼별. platforms.json · templates.json
-make_icon.py      app.ico · icon.png(180) 만들기     build.py  PyInstaller 한 파일 exe     release.py  빌드→태그→GitHub 릴리스·exe 첨부
-tests\            test_gen · test_store · test_qr · test_ai(가짜 CLI·가짜 Ollama 서버 — 진짜 AI 안 부름) (unittest)
+make_icon.py      app.ico · icon.png(180) 만들기     build.py  윈도우 한 파일 exe · 맥 .app(+zip)     release.py  빌드→태그→GitHub 릴리스·exe 첨부(맥 zip 은 아직 — ARCHITECTURE 8절)
+tests\            test_gen · test_store · test_qr · test_ai(가짜 CLI·가짜 Ollama 서버 — 진짜 AI 안 부름) (unittest) · smoke.py(CI 스모크, unittest 가 안 줍는다)
 ```
 
-데이터(앱이 쓰는 것, 저장소 밖): 기본 `%APPDATA%\PostKit\`(config.json · voice\ · posts\<날짜-메모>\{memo.txt, photos\, order.json, <플랫폼>.md, .history.jsonl, campaign.txt} · campaigns.json · ledger.json). 옮겼으면 `%APPDATA%\PostKit\location.json` 이 새 자리를 가리킨다. 로그·자동 백업은 `%LOCALAPPDATA%\PostKit\`(app.log · backups\).
+데이터(앱이 쓰는 것, 저장소 밖): 기본 `%APPDATA%\PostKit\`(config.json · voice\ · posts\<날짜-메모>\{memo.txt, photos\, order.json, <플랫폼>.md, .history.jsonl, campaign.txt} · campaigns.json · ledger.json). 옮겼으면 `%APPDATA%\PostKit\location.json` 이 새 자리를 가리킨다. 로그·자동 백업은 `%LOCALAPPDATA%\PostKit\`(app.log · backups\). 맥은 `~/Library/Application Support/PostKit`(데이터) · `…/PostKit-local/backups` · `~/Library/Logs/PostKit/app.log`.
 
 ## 다른 PC 에서 이어 하기
 
@@ -85,6 +92,9 @@ cd C:\swbins-kit2 && claude                                                     
 - ui.html: `[hidden]` 은 맨 위 `display:none !important` 규칙으로 이긴다(없으면 display 규칙에 덮인다).
 - 회사망 PC 에선 **pip·파이썬 urllib 이 SSL 검사에 막힌다**(self signed) — 인증서 검사를 끄지 말고 의존성 없이 짠다(qr.py 가 그래서 자체 구현). curl·git 은 된다.
 - 실제 claude 호출 시험은 한 번에 30초쯤, 사용량을 먹으니 꼭 필요한 것만. codex·gemini 도 마찬가지 — 자동 시험은 test_ai 의 가짜로.
+- 맥에서 깨지는 게 있는지는 CI 로만 본다 — 결과는 `gh` 가 없으니 `git credential fill` 토큰으로 GitHub API(`actions/runs`·`jobs/<id>/logs`), 토큰은 화면·파일에 남기지 않는다.
+  CLI 를 '없음'으로 만드는 시험은 PATH 만 비우면 안 된다 — `gen.extra_dirs`·`_login_shell_path` 도 비운다(test_ai `test_missing_cli`).
+- `tests/smoke.py` 는 8650 에 이미 앱이 떠 있으면 멈춘다(실제 데이터 보호). 이 PC 에서 돌릴 땐 띄워 둔 PostKit 을 먼저 끈다.
 - 이 PC(회사망) 기본 파이썬엔 Pillow 가 pip SSL 에 막혀 없다 — 사진 시험(PhotoTest)은 Pillow 가 없으면 **건너뛴다**(skip, 실패 아님). 전부 돌리려면 Pillow 있는 파이썬(이 PC: `C:\swbins2\tools\macro-hub\.venv\Scripts\python.exe`)으로 `-m unittest discover tests`.
 
 ## git · 릴리스

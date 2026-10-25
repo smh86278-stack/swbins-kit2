@@ -32,6 +32,7 @@ from datetime import datetime
 
 import ai
 import gen
+import refs
 import store
 
 APP = "PostKit"
@@ -105,6 +106,8 @@ def load_cfg():
     c.setdefault("voice_note", "")
     c.setdefault("default_platforms", ["naver_blog", "instagram"])
     c.setdefault("write_urls", {})
+    if c.get("photo_max") not in gen.PHOTO_CHOICES:
+        c["photo_max"] = gen.MAX_PHOTOS
     return c
 
 
@@ -196,6 +199,7 @@ def post_info(post_dir):
     return {"name": name, "memo": read_text(os.path.join(post_dir, "memo.txt")),
             "title": read_text(os.path.join(post_dir, "title.txt")),
             "campaign": read_text(os.path.join(post_dir, "campaign.txt")).strip(),
+            "refs": read_text(os.path.join(post_dir, "refs.txt")),
             "photos": gen.photo_names(post_dir), "texts": texts}
 
 
@@ -228,9 +232,12 @@ def gen_one(job, post_dir, plat, cfg, s, mode, note):
     tags = fixed_tags(plat, cfg)
     camp = campaign_for(post_dir)
     photos = gen.photo_names(post_dir)
+    n = cfg["photo_max"]
+    shown = photos[:n] if n else photos
     prompt = gen.build_prompt(plat, memo, title, photos, gen.load_voice(VOICE), cfg["voice_note"], tags, camp, cfg.get("kids"),
-                              photo_mode=mode)
-    r = ai.run(s, prompt, post_dir, photos=photos if mode == "attached" else ())
+                              photo_mode=mode, max_photos=n, refs=refs.load(post_dir))
+    r = ai.run(s, prompt, post_dir, photos=shown if mode == "attached" else (),
+               timeout=max(300, 120 + 15 * len(shown)))     # 사진이 많으면 보는 데 오래 걸린다
     if r["text"]:
         r["text"] = gen.apply_campaign(gen.ensure_tags(r["text"], tags), camp, plat)
         save_result(post_dir, plat["id"], r["text"], r["session_id"], "", s["engine"])
@@ -424,7 +431,7 @@ def growth():
 
 
 def compose_growth(picked):
-    """고른 성장 기록으로 새 글 — 모은 메모 + 기록마다 대표 사진 한 장(개월 순, 10장까지)."""
+    """고른 성장 기록으로 새 글 — 모은 메모 + 기록마다 대표 사진 한 장(개월 순, 30장까지)."""
     g = growth()
     entries = [e for e in g["entries"] if e["name"] in set(picked or [])]
     if not entries:
@@ -664,6 +671,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 write_text(os.path.join(d, "memo.txt"), b.get("memo", ""))
                 write_text(os.path.join(d, "title.txt"), b.get("title", ""))
                 write_text(os.path.join(d, "campaign.txt"), str(b.get("campaign") or ""))
+                write_text(os.path.join(d, "refs.txt"), "\n".join(refs.parse_urls(str(b.get("refs") or ""))))
                 return self.send(200, {"name": os.path.basename(d)})
             if u.path == "/api/post/save":
                 d = post_path(b.get("name", ""))
@@ -671,7 +679,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 write_text(os.path.join(d, "title.txt"), b.get("title", ""))
                 if "campaign" in b:
                     write_text(os.path.join(d, "campaign.txt"), str(b.get("campaign") or ""))
+                if "refs" in b:
+                    write_text(os.path.join(d, "refs.txt"), "\n".join(refs.parse_urls(str(b["refs"] or ""))))
                 return self.send(200, {"ok": True})
+            if u.path == "/api/refs":                   # 참고 글 미리 읽어 보기 — 제목·글자 수·못 읽은 까닭
+                rows = refs.load(post_path(b.get("name", "")), fresh=True)
+                return self.send(200, [{"url": r["url"], "title": r["title"], "chars": len(r["text"]), "error": r["error"]} for r in rows])
             if u.path == "/api/items/save":
                 if b.get("kind") not in ITEMS:
                     raise ValueError("없는 목록입니다.")
@@ -722,7 +735,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 return self.send(200, {"ok": True})
             if u.path == "/api/config":
                 cfg = load_cfg()
-                for k in ("voice_note", "default_platforms", "write_urls", "fixed_tags", "kids"):
+                for k in ("voice_note", "default_platforms", "write_urls", "fixed_tags", "kids", "photo_max"):
                     if k in b:
                         cfg[k] = b[k]
                 if "ai" in b:

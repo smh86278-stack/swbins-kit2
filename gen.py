@@ -17,7 +17,8 @@ IS_MAC = sys.platform == "darwin"
 CREATE_NO_WINDOW = 0x08000000
 RES = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))     # platforms.json·prompts 가 있는 곳(exe 면 풀린 임시 폴더)
 
-MAX_PHOTOS = 10            # 사진은 앞 10장만 보게 한다
+MAX_PHOTOS = 30            # 사진은 기본 앞 30장만 보게 한다(체험단 글은 15~20장이 흔하다). 설정 photo_max 로 바꾼다(0 = 전부)
+PHOTO_CHOICES = (10, 20, 30, 50, 0)
 VOICE_COUNT = 5            # 말투 예시는 최근 5편
 VOICE_CHARS = 1500         # 한 편에 앞 1500자까지
 PHOTO_EXT = (".jpg", ".jpeg", ".png", ".webp", ".gif")
@@ -340,11 +341,26 @@ def apply_campaign(text, campaign, platform):
     return ensure_tags(text, campaign_tags(campaign, platform))
 
 
+def refs_block(refs):
+    """사용자가 고른 비슷한 글 — 구성만 참고하게. 문장을 옮기면 네이버 유사 문서로 걸리고, 남의 사실을 내 경험처럼 쓰게 된다."""
+    ok = [r for r in refs or () if r.get("text")]
+    if not ok:
+        return ""
+    out = ["## 참고 글 (구성만 참고)",
+           "사용자가 고른, 주제가 비슷한 남의 글이다. 소제목 흐름·다룬 항목·글 길이·해시태그 경향만 참고한다.\n"
+           "- 문장·표현·제목을 그대로 또는 살짝 바꿔 옮기지 않는다(유사 문서로 걸린다).\n"
+           "- 참고 글에 나온 가격·시간·메뉴·후기 같은 사실은 재료(메모·사진)에 없으면 쓰지 않는다 — 내 경험이 아니다."]
+    for i, r in enumerate(ok, 1):
+        out.append("### 참고 %d%s\n%s" % (i, " — " + r["title"] if r.get("title") else "", r["text"]))
+    return "\n\n".join(out)
+
+
 def build_prompt(platform, memo, title, photos, voice_texts, voice_note, fixed_tags=(), campaign=None, kids=None,
-                 photo_mode="Read"):
+                 photo_mode="Read", max_photos=MAX_PHOTOS, refs=()):
     """플랫폼 하나에 쓸 글을 요청하는 프롬프트.
     photo_mode — 사진 보는 법(ai.photo_mode): 'Read'·'read_file' 은 그 도구로 ./photos/ 를 열고,
-    'attached' 는 사진이 붙어 온다, 'none' 은 못 본다(사진 내용을 지어내지 않게)."""
+    'attached' 는 사진이 붙어 온다, 'none' 은 못 본다(사진 내용을 지어내지 않게).
+    max_photos — 앞 몇 장까지 보게 할지(0 이면 전부). refs — 참고 글(refs.load)."""
     tags = "%d개 안팎" % platform["hashtags"] if platform.get("hashtags") else "쓰지 않음"
     if platform.get("hashtags") and fixed_tags:
         tags += " — 이 태그는 꼭 그대로 넣는다(개수에 포함): " + " ".join(fixed_tags)
@@ -359,11 +375,14 @@ def build_prompt(platform, memo, title, photos, voice_texts, voice_note, fixed_t
     vb = voice_block(voice_texts, voice_note)
     if vb:
         head.append(vb)
+    rb = refs_block(refs)
+    if rb:
+        head.append(rb)
     mat = ["## 재료", "메모:\n" + (memo.strip() or ("(메모 없음)" if photo_mode == "none" else "(메모 없음 — 사진만 보고 쓴다)"))]
     if title.strip():
         mat.append("제목 후보(그대로 쓰거나 다듬어도 된다): " + title.strip())
     if photos:
-        shown = photos[:MAX_PHOTOS]
+        shown = photos[:max_photos] if max_photos else photos
         names = "\n".join("%d. ./photos/%s" % (i, n) for i, n in enumerate(shown, 1))
         if photo_mode == "none":
             mat.append("사진 %d장이 있지만 이번엔 볼 수 없다. 사진 속 내용(음식 모양·색·장소 모습 등)을 지어내지 말고 메모에 있는 것만 쓴다. "
@@ -372,8 +391,8 @@ def build_prompt(platform, memo, title, photos, voice_texts, voice_note, fixed_t
             mat.append("사진 %d장이 이 요청에 붙어 있다 — 아래 순서대로 보고 쓴다:\n%s" % (len(shown), names))
         else:
             mat.append("사진 %d장 — 아래 순서대로 %s 로 열어 보고 쓴다:\n%s" % (len(shown), photo_mode, names))
-        if len(photos) > MAX_PHOTOS:
-            mat.append("(사진이 %d장 더 있지만 보지 않는다.)" % (len(photos) - MAX_PHOTOS))
+        if len(photos) > len(shown):
+            mat.append("(사진이 %d장 더 있지만 보지 않는다.)" % (len(photos) - len(shown)))
     else:
         mat.append("사진 없음.")
     head.append("\n\n".join(mat))

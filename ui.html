@@ -400,13 +400,17 @@ body:not(.os-win) .win-only, body:not(.os-mac) .mac-only { display: none !import
           <textarea id="memo" rows="7" placeholder="예) 을지로 OO집 김치찌개 7천원. 점심 웨이팅 20분. 고기 많음, 국물은 좀 짰음. 공깃밥 리필 무료"></textarea>
           <label class="small">제목 후보 (비워도 돼요) · 협찬이면 메모에 <code>#협찬</code></label>
           <input type="text" id="title">
+          <label class="small">참고할 글 주소 (비워도 돼요) · 비슷한 블로그·인스타 글, 한 줄에 하나 · 3개까지 — 구성만 참고하고 문장은 옮기지 않아요</label>
+          <div class="row"><textarea id="refs" rows="2" placeholder="https://blog.naver.com/아이디/글번호" style="flex:1"></textarea><button class="btn" id="readRefs" title="주소의 글을 읽을 수 있는지 미리 봐요">읽어 보기</button></div>
+          <div class="hint" id="refsInfo"></div>
         </div>
         <div>
           <div class="step"><i>2</i>올릴 곳</div>
           <div class="plats" id="plats"></div>
         </div>
       </div>
-      <div class="step" style="margin-top:14px"><i>3</i>사진 <span class="hint">끌어다 놓기 · 붙여넣기 · 끌어서 순서 바꾸기(순서 = 글 순서) · 앞 10장을 봐요</span></div>
+      <div class="step" style="margin-top:14px"><i>3</i>사진 <span class="hint">끌어다 놓기 · 붙여넣기 · 끌어서 순서 바꾸기(순서 = 글 순서) · AI 가 볼 사진
+        <select id="photoMax" title="많을수록 글이 사진을 더 고르게 담지만 오래 걸려요"><option value="10">앞 10장</option><option value="20">앞 20장</option><option value="30">앞 30장</option><option value="50">앞 50장</option><option value="0">전부</option></select></span></div>
       <div class="drop" id="drop">
         <button class="add" id="pick"><div><svg class="i" data-i="image"></svg>사진 고르기</div></button>
         <span class="empty" id="dropEmpty">여기에 사진을 끌어다 놓아도 돼요</span>
@@ -616,7 +620,7 @@ body:not(.os-win) .win-only, body:not(.os-mac) .mac-only { display: none !import
       </div>
       <div class="box">
         <h2><svg class="i" data-i="send"></svg>플랫폼별 올리는 법</h2>
-        <div class="pl"><span class="pi naver_blog" style="--pc:var(--c-naver_blog)">b</span><div><b>네이버 블로그</b> — <b>제목 복사</b> → 제목 칸, <b>본문 복사(서식)</b> → 본문에 붙이면 소제목·문단이 살아 있어요. <code>[사진 1]</code> 자리에 사진을 순서대로 넣고 표시는 지워요.</div></div>
+        <div class="pl"><span class="pi naver_blog" style="--pc:var(--c-naver_blog)">b</span><div><b>네이버 블로그</b> — <b>제목 복사</b> → 제목 칸, <b>본문 복사 + 글쓰기 창</b> → 열린 창 본문에 붙이면 소제목·문단이 살아 있어요. 글 속 <code>[사진 1]</code> 자리에 그 사진이 같이 붙어요. 안 붙으면 그 자리에 사진을 순서대로 넣으세요.</div></div>
         <div class="pl"><span class="pi naver_cafe" style="--pc:var(--c-naver_cafe)">C</span><div><b>네이버 카페</b> — 블로그와 같아요. 게시판을 고르고 제목·본문을 따로 붙여요.</div></div>
         <div class="pl"><span class="pi instagram">◎</span><div><b>인스타그램</b> — 사진을 먼저 고르고 문구 칸에 붙여요. 폰으로 올린다면 카톡 나에게 보내기 등으로 옮기면 편해요.</div></div>
         <div class="pl"><span class="pi tiktok" style="--pc:var(--c-tiktok)">♪</span><div><b>틱톡</b> — <code>[캡션]</code> 은 영상 설명에, <code>[자막 대본]</code> 은 편집할 때 사진 위에 한 줄씩. <code>(사진 2)</code> 는 얹을 사진이에요.</div></div>
@@ -761,6 +765,7 @@ async function loadState() {
   $("#voiceNote").value = d.config.voice_note || "";
   $("#cafeUrl").value = (d.config.write_urls || {}).naver_cafe || "";
   $("#fixedTags").value = d.config.fixed_tags || "";
+  $("#photoMax").value = String(d.config.photo_max ?? 30);
   $("#kidBirth").value = (d.config.kids || {}).birthday || "";
   $("#kidNames").value = (d.config.kids || {}).names || "";
   $("#voiceList").innerHTML = d.voice.length ? "<h2>넣은 글 " + d.voice.length + "편</h2>" + d.voice.map(v =>
@@ -804,16 +809,27 @@ function movePhoto(from, before) {
 }
 
 async function ensurePost() {
-  const memo = $("#memo").value, title = $("#title").value;
+  const memo = $("#memo").value, title = $("#title").value, refs = $("#refs").value;
   if (!S.name) {
-    S.name = (await api("/api/post/new", { memo, title, campaign: S.campaign || "" })).name;
+    S.name = (await api("/api/post/new", { memo, title, refs, campaign: S.campaign || "" })).name;
     $("#postName").textContent = S.name;
     const c = camp(S.campaign);
     if (c) api("/api/items/save", { kind: "campaigns", item: Object.assign({}, c, { post: S.name }) }).then(loadCampsQuiet).catch(() => {});
   } else {
-    await api("/api/post/save", { name: S.name, memo, title, campaign: S.campaign || "" });
+    await api("/api/post/save", { name: S.name, memo, title, refs, campaign: S.campaign || "" });
   }
 }
+$("#readRefs").onclick = async () => {
+  if (!$("#refs").value.trim()) return toast("참고할 글 주소를 넣어 주세요.");
+  $("#refsInfo").textContent = "읽는 중…";
+  try {
+    await ensurePost();
+    const rows = await api("/api/refs", { name: S.name });
+    $("#refsInfo").innerHTML = rows.map((r, i) => r.error
+      ? `✗ ${i + 1}. 못 읽었어요 — ${esc(r.error)}`
+      : `✓ ${i + 1}. ${esc(r.title || r.url)} (${r.chars.toLocaleString()}자)`).join("<br>") || "주소를 찾지 못했어요.";
+  } catch (e) { $("#refsInfo").textContent = ""; fail(e); }
+};
 
 // 메모 틀 — 비었으면 그대로, 쓰던 게 있으면 아래에 붙인다
 function useTemplate(t) {
@@ -888,7 +904,7 @@ $("#newPost").onclick = () => {
 };
 function newPost(campaign) {
   S.name = ""; S.photos = []; S.texts = {}; S.campaign = campaign || "";
-  $("#memo").value = ""; $("#title").value = ""; $("#postName").textContent = "새 글";
+  $("#memo").value = ""; $("#title").value = ""; $("#refs").value = ""; $("#refsInfo").textContent = ""; $("#postName").textContent = "새 글";
   renderPhotos(); $("#cards").innerHTML = ""; showBlank(); renderCampBar();
 }
 
@@ -945,8 +961,8 @@ function card(p, status, error, label) {
       <div class="chips">${QUICK.map(([l, t]) => `<button data-q="${esc(t)}">${esc(l)}</button>`).join("")}</div>
       <div class="refine"><input type="text" class="ins" placeholder="말로 다듬기 — 예) 가격 얘기를 앞으로, 반말로"><button class="btn rf">다듬기</button></div>
       <div class="actions">${plat(p).title
-        ? `<button class="btn ct" title="첫 줄(제목)만 복사 — 제목 칸에 붙여 넣어요">${ic("copy")}제목</button><button class="btn main cb" title="제목 뺀 본문을 소제목·문단 서식째로 복사">${ic("copy")}본문 복사(서식)</button>`
-        : `<button class="btn main cp">${ic("copy")}복사</button>`}<button class="btn wr" title="평소 브라우저로 글쓰기 화면을 열어요">${ic("external")}글쓰기 창 열기</button><button class="btn fd pc-only">${ic("folder")}사진 폴더</button><button class="btn sv" title="다 고친 이 글을 내 말투 예시로 넣어요 — 쓸수록 내 글에 가까워져요">${ic("save")}내 말투로 저장</button></div>`;
+        ? `<button class="btn ct" title="첫 줄(제목)만 복사 — 제목 칸에 붙여 넣어요">${ic("copy")}제목</button><button class="btn main wr" title="제목 뺀 본문을 소제목·문단 서식째로 복사하고, 평소 브라우저로 글쓰기 화면을 열어요">${ic("external")}본문 복사 + 글쓰기 창</button>`
+        : `<button class="btn main wr" title="복사하고, 평소 브라우저로 글쓰기 화면을 열어요">${ic("external")}복사 + 글쓰기 창</button>`}<button class="btn fd pc-only">${ic("folder")}사진 폴더</button><button class="btn sv" title="다 고친 이 글을 내 말투 예시로 넣어요 — 쓸수록 내 글에 가까워져요">${ic("save")}내 말투로 저장</button></div>`;
     const ta = c.querySelector("textarea");
     ta.oninput = () => { S.texts[p] = ta.value; count(c, ta.value); clearTimeout(ta.h); ta.h = setTimeout(() => {
       showLint(c, ta.value);
@@ -954,23 +970,21 @@ function card(p, status, error, label) {
     c.querySelectorAll("[data-q]").forEach(b => b.onclick = () => refine(p, b.dataset.q));
     c.querySelector(".rf").onclick = () => refine(p, c.querySelector(".ins").value);
     c.querySelector(".ins").onkeydown = e => { if (e.key === "Enter" && !e.isComposing) refine(p, e.target.value); };
-    if (plat(p).title) {
+    if (plat(p).title)
       c.querySelector(".ct").onclick = () => copyText(splitTitle(ta.value).title).then(() => toast("제목을 복사했어요 — 제목 칸에 붙여 넣으세요."), fail);
-      c.querySelector(".cb").onclick = () => copyRich(splitTitle(ta.value).body).then(() => toast("본문을 서식째 복사했어요 — 본문에 붙여 넣으세요."), fail);
-    } else {
-      c.querySelector(".cp").onclick = () => copyText(ta.value).then(() => toast("복사했어요 — 글쓰기 창에 붙여 넣으세요."), fail);
-    }
     c.querySelector(".sv").onclick = () => {
       const t = voiceSample(ta.value);
       if (t.replace(/\s/g, "").length < 80) return toast("글이 너무 짧아요 — 내 말투 예시는 어느 정도 긴 글이 좋아요.");
       if (/\[확인:/.test(t) && !confirm("[확인: …] 자리가 남아 있어요. 그래도 내 말투 예시로 넣을까요?")) return;
       api("/api/voice", { text: t }).then(() => { toast("내 말투 예시로 넣었어요. 다음 글부터 반영돼요."); loadState(); }).catch(fail);
     };
-    c.querySelector(".wr").onclick = () => {
-      if (!PHONE) return api("/api/open", { what: "write", platform: p }).catch(fail);
-      const u = plat(p).write_url;                      // 폰에선 폰에서 연다(누른 순간 열어야 사파리가 막지 않는다)
-      if (!u) return toast("글쓰기 주소가 없어요 — 카페는 PC 의 설정에서 넣어 주세요.");
-      window.open(u, "_blank");
+    c.querySelector(".wr").onclick = () => {           // 복사 + 글쓰기 창 — 붙여 넣기(Ctrl+V)만 남긴다. 창을 채우거나 올리는 건 하지 않는다
+      const copied = (plat(p).title ? copyRich(splitTitle(ta.value).body) : copyText(ta.value))
+        .then(() => toast(plat(p).title ? "본문을 서식·사진째 복사했어요 — 글쓰기 창 본문에 붙여 넣으세요(제목은 「제목」 단추)." : "복사했어요 — 글쓰기 창에 붙여 넣으세요."), fail);
+      const u = plat(p).write_url;
+      if (!u) return copied.then(() => toast("복사는 했는데 글쓰기 주소가 없어요 — 카페는 설정에서 넣어 주세요."));
+      if (PHONE) return window.open(u, "_blank");        // 폰에선 누른 순간 열어야 사파리가 막지 않는다(복사는 위에서 이미 시작)
+      copied.then(() => api("/api/open", { what: "write", platform: p })).catch(fail);
     };
     c.querySelector(".fd").onclick = () => api("/api/open", { what: "folder", name: S.name }).catch(fail);
     $("#cards").appendChild(c);
@@ -1049,7 +1063,8 @@ function splitTitle(t) {
   return { title: lines[i].replace(/^#+\s*/, "").trim(), body: lines.slice(i + 1).join("\n").trim() };
 }
 // 본문 → 서식 있는 HTML(네이버 에디터에 붙여 넣으면 소제목·문단이 살아 있게). 텍스트로도 같이 넣는다
-function bodyHtml(body) {
+// imgs — {사진 번호: data URL}. 있으면 [사진 n] 표시 대신 그 사진을 넣는다(붙여 넣을 때 사진도 같이 들어가게)
+function bodyHtml(body, imgs = {}) {
   const out = [];
   for (const para of body.split(/\n\s*\n/)) {
     const lines = para.split("\n").map(l => l.trim()).filter(Boolean);
@@ -1058,7 +1073,11 @@ function bodyHtml(body) {
     const flush = () => { if (buf.length) out.push(`<p style="font-size:16px;line-height:1.8">${buf.join("<br>")}</p>`); buf = []; };
     for (const l of lines) {
       if (/^#{1,3}\s+/.test(l)) { flush(); out.push(`<p><b style="font-size:20px">${esc(l.replace(/^#+\s+/, ""))}</b></p>`); }
-      else if (/^\[사진\s*\d+\]$/.test(l)) { flush(); out.push(`<p style="color:#9a8fc4;text-align:center">${esc(l)}</p>`); }
+      else if (/^\[사진\s*\d+\]$/.test(l)) {
+        flush();
+        const src = imgs[+l.match(/\d+/)[0]];
+        out.push(src ? `<p style="text-align:center"><img src="${src}"></p>` : `<p style="color:#9a8fc4;text-align:center">${esc(l)}</p>`);
+      }
       else buf.push(esc(l));
     }
     flush();
@@ -1078,13 +1097,38 @@ async function copyText(t) {
   ta.remove();
   if (!ok) throw new Error("복사하지 못했어요 — 글을 길게 눌러 직접 복사해 주세요.");
 }
+// 글에 나온 [사진 n] 의 사진을 긴 변 1280px JPEG 로 줄여 data URL 로 — 클립보드가 너무 커지지 않게
+async function photoUrls(body) {
+  const imgs = {};
+  for (const n of new Set((body.match(/^\s*\[사진\s*\d+\]\s*$/gm) || []).map(l => +l.match(/\d+/)[0]))) {
+    const f = S.photos[n - 1];
+    if (!f) continue;
+    try {
+      const im = new Image();
+      im.src = `/api/photo?name=${encodeURIComponent(S.name)}&file=${encodeURIComponent(f)}`;
+      await im.decode();
+      const k = Math.min(1, 1280 / Math.max(im.naturalWidth, im.naturalHeight));
+      const cv = document.createElement("canvas");
+      cv.width = Math.round(im.naturalWidth * k); cv.height = Math.round(im.naturalHeight * k);
+      cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height);
+      imgs[n] = cv.toDataURL("image/jpeg", 0.85);
+    } catch (e) { /* 못 읽은 사진은 [사진 n] 표시로 남긴다 */ }
+  }
+  return imgs;
+}
 async function copyRich(body) {
   if (!window.isSecureContext || !window.ClipboardItem) return copyText(plainBody(body));
   try {
-    await navigator.clipboard.write([new ClipboardItem({
-      "text/html": new Blob([bodyHtml(body)], { type: "text/html" }),
+    await navigator.clipboard.write([new ClipboardItem({     // 사진 줄이는 동안에도 누른 순간의 복사 허락이 이어지게 Promise 로 넘긴다
+      "text/html": photoUrls(body).then(imgs => new Blob([bodyHtml(body, imgs)], { type: "text/html" })),
       "text/plain": new Blob([plainBody(body)], { type: "text/plain" }) })]);
-  } catch (e) { await navigator.clipboard.writeText(plainBody(body)); }
+  } catch (e) {
+    try {                                                   // Promise 를 못 받는 곳이면 사진 없이 서식만
+      await navigator.clipboard.write([new ClipboardItem({
+        "text/html": new Blob([bodyHtml(body)], { type: "text/html" }),
+        "text/plain": new Blob([plainBody(body)], { type: "text/plain" }) })]);
+    } catch (e2) { await navigator.clipboard.writeText(plainBody(body)); }
+  }
 }
 
 function count(c, t) { c.querySelector(".count").textContent = t ? t.replace(/\s/g, "").length + "자" : ""; }
@@ -1112,6 +1156,7 @@ $("#saveCafe").onclick = () => {
 };
 $("#saveKids").onclick = () => api("/api/config", { kids: { birthday: $("#kidBirth").value, names: $("#kidNames").value.trim() } })
   .then(d => { S.config = d; toast("저장했어요."); }).catch(fail);
+$("#photoMax").onchange = () => api("/api/config", { photo_max: +$("#photoMax").value }).then(() => toast("저장했어요 — 다음에 만드는 글부터 그만큼 봐요.")).catch(fail);
 $("#saveTags").onclick =() => api("/api/config", { fixed_tags: $("#fixedTags").value.trim() }).then(() => toast("저장했어요 — 다음에 만드는 글부터 들어가요.")).catch(fail);
 $("#openData").onclick = () => api("/api/open", { what: "data" }).catch(fail);
 
@@ -1284,7 +1329,7 @@ async function openPost(name) {
   try {
     const d = await api("/api/post?name=" + encodeURIComponent(name));
     S.name = d.name; S.photos = d.photos; S.texts = d.texts; S.campaign = d.campaign || "";
-    $("#memo").value = d.memo; $("#title").value = d.title; $("#postName").textContent = d.name;
+    $("#memo").value = d.memo; $("#title").value = d.title; $("#refs").value = d.refs || ""; $("#refsInfo").textContent = ""; $("#postName").textContent = d.name;
     renderPhotos(); $("#cards").innerHTML = ""; renderCampBar();
     Object.keys(d.texts).forEach(p => card(p, "done"));
     showBlank();

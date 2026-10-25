@@ -246,7 +246,7 @@ def run(s, prompt, workdir, photos=(), resume_id=None, timeout=300):
     why = not_ready(s) if e != "ollama" else ""
     if why:
         return _fail(why)
-    photos = list(photos)[:gen.MAX_PHOTOS]
+    photos = list(photos)     # 몇 장 붙일지는 부르는 쪽(설정 photo_max)이 정한다
     if e == "codex":
         return _codex(prompt, workdir, photos, model, timeout)
     if e == "gemini":

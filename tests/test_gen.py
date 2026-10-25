@@ -71,10 +71,13 @@ class PromptTest(unittest.TestCase):
 
     def test_photo_limit(self):
         names = ["%02d.jpg" % i for i in range(13)]
-        s = gen.build_prompt(BLOG, "m", "", names, [], "")
+        s = gen.build_prompt(BLOG, "m", "", names, [], "", max_photos=10)
         self.assertIn("./photos/09.jpg", s)
         self.assertNotIn("./photos/10.jpg", s)
         self.assertIn("3장 더", s)
+        s = gen.build_prompt(BLOG, "m", "", names, [], "", max_photos=0)     # 0 = 전부
+        self.assertIn("./photos/12.jpg", s)
+        self.assertNotIn("장 더", s)
 
     def test_refine_prompt(self):
         s = gen.build_refine_prompt(BLOG, "더 짧게", "지금 글 내용")

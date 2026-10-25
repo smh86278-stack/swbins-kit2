@@ -527,6 +527,7 @@ body:not(.os-win) .win-only, body:not(.os-mac) .mac-only { display: none !import
         <label>업체·브랜드 *<input type="text" id="cBrand" placeholder="예) OO식당"></label>
         <label>캠페인 이름<input type="text" id="cTitle" placeholder="예) 10월 신메뉴 체험단"></label>
         <label class="gb">공구 시작일<input type="date" id="cStart"></label>
+        <label class="ngb">방문·체험 예약 (날짜·시간)<input type="datetime-local" id="cVisit"></label>
         <label>마감일(글 올릴 기한 · 공구 마감)<input type="date" id="cDeadline"></label>
         <label>제공받은 것<input type="text" id="cProvided" placeholder="예) 2인 식사권 · 제품 1개"></label>
         <label class="gb">정가<input type="text" id="cPrice" placeholder="39,000원"></label>
@@ -542,12 +543,17 @@ body:not(.os-win) .win-only, body:not(.os-mac) .mac-only { display: none !import
       <input type="text" id="cTags" placeholder="#OO식당 #을지로맛집">
       <label class="small">필수 링크 (한 줄에 하나 — 지도·구매 링크 등)</label>
       <textarea id="cLinks" rows="2" placeholder="https://..."></textarea>
+      <label class="small">올린 뒤 검수할 것</label>
+      <div class="row"><span class="hint">사진</span><input type="number" id="cMinPhotos" min="0" placeholder="0" style="width:70px"><span class="hint">장 이상 (0 이면 안 봐요)</span>
+        <label class="hint" style="margin-left:12px"><input type="checkbox" id="cNeedMap"> 지도(장소) 필수</label></div>
       <label class="small">업체 요구사항 (그대로 AI 에게 전달돼요)</label>
       <textarea id="cNotes" rows="3" placeholder="예) 주차 정보 꼭 넣기, 사진 15장 이상, 동영상 1개"></textarea>
       <div class="row" style="margin-top:12px"><button class="btn main" id="cSave">저장</button><button class="btn" id="cCancel">취소</button>
         <span class="grow"></span><button class="btn danger" id="cDel" hidden>삭제</button></div>
     </div>
     <div class="row filt" id="campFilt"><button data-f="open" class="on">진행 중</button><button data-f="done">완료</button><button data-f="all">전체</button></div>
+    <div class="box" id="schedBox" hidden></div>
+    <div class="box" id="auditBox" hidden></div>
     <div id="campList"></div>
   </section>
 
@@ -700,7 +706,7 @@ const IC = {
   brush: "M14 4l6 6-8.5 8.5a3 3 0 0 1-4.2 0l-1.8-1.8a3 3 0 0 1 0-4.2zM4 20l3-3",
   db: "M5 6c0-1.7 3.1-3 7-3s7 1.3 7 3-3.1 3-7 3-7-1.3-7-3zM5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3",
   phone: "M8 3h8v18H8zM11.5 18h1", cloud: "M7 18a4 4 0 0 1-.5-8A6 6 0 0 1 18 9a4.5 4.5 0 0 1-.5 9z",
-  flag: "M5 21V4M5 4h11l-2 4 2 4H5", send: "M4 12l16-8-6 16-3-7zM11 13l9-9", save: "M5 4h11l3 3v13H5zM8 4v5h7V4M8 20v-6h8v6",
+  calendar: "M4 6h16v14H4zM4 10h16M8 3v4M16 3v4", flag: "M5 21V4M5 4h11l-2 4 2 4H5", send: "M4 12l16-8-6 16-3-7zM11 13l9-9", save: "M5 4h11l3 3v13H5zM8 4v5h7V4M8 20v-6h8v6",
 };
 const ic = n => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="${IC[n] || ""}"/></svg>`;
 function fillIcons(root) {
@@ -1356,7 +1362,29 @@ async function loadCampsQuiet() {
   $("#dueBadge").hidden = !due.length; $("#dueBadge").textContent = due.length;
   return due;
 }
-async function loadCamps() { await loadCampsQuiet(); renderCamps(); }
+async function loadCamps() { await loadCampsQuiet(); renderCamps(); renderSched(); }
+
+// 일정 — cal.py events 와 같은 규칙(진행 중 캠페인의 방문·마감·공구 시작). n = 오늘부터 며칠
+const EV = { visit: "방문", deadline: "마감", start: "공구 시작" };
+function schedule() {
+  const out = [];
+  S.camps.filter(c => c.status !== "done").forEach(c => [["visit", c.visit], ["deadline", c.deadline], ["start", c.kind === "groupbuy" && c.start]].forEach(([k, v]) => {
+    if (!v) return;
+    const [date, time = ""] = v.split("T");
+    out.push({ id: c.id, kind: k, what: EV[k], brand: c.brand, date, time: time.slice(0, 5), n: Math.round((new Date(date) - new Date(today())) / 86400000) });
+  }));
+  return out.sort((a, b) => (a.date + (a.time || "99")).localeCompare(b.date + (b.time || "99")));
+}
+function renderSched() {
+  const evs = schedule().filter(e => e.n <= 14 && (e.n >= 0 || e.kind === "deadline")), box = $("#schedBox");
+  box.hidden = !S.camps.some(c => c.status !== "done" && (c.visit || c.deadline));
+  if (box.hidden) return;
+  const day = n => n < 0 ? "D+" + -n : n === 0 ? "오늘" : n === 1 ? "내일" : "D-" + n;
+  box.innerHTML = `<div class="row between"><h3>📅 다가오는 일정 <span class="hint">2주 안 · 지난 마감</span></h3>
+      <a class="btn" href="/api/calendar.ics" download style="text-decoration:none" title="폰·PC 달력에 넣으면 전날·당일 알림이 와요 — 앱을 꺼 둬도">${ic("calendar")}달력에 넣기 (.ics)</a></div>
+    ${evs.length ? evs.map(e => `<div style="${e.n < 0 ? "color:var(--bad)" : e.n <= 1 ? "font-weight:600" : ""}">${day(e.n)} · ${esc(e.date.slice(5).replace("-", "/"))}${e.time ? " " + esc(e.time) : ""} — <b>${esc(e.what)}</b> ${esc(e.brand)}</div>`).join("")
+      : '<span class="hint">2주 안에 잡힌 일정이 없어요.</span>'}`;
+}
 
 function renderCamps() {
   const f = S.campFilter;
@@ -1365,13 +1393,15 @@ function renderCamps() {
   $("#campList").innerHTML = rows.length ? rows.map(c => {
     const d = dday(c);
     const sub = [c.provided && "제공 " + c.provided, c.kind === "groupbuy" && c.sale_price && "가격 " + (c.price ? c.price + " → " : "") + c.sale_price,
-      (c.keywords || []).filter(k => k.word).map(k => k.word + "×" + (k.min || 1)).join(" "), c.deadline && "마감 " + c.deadline].filter(Boolean).join(" · ");
+      (c.keywords || []).filter(k => k.word).map(k => k.word + "×" + (k.min || 1)).join(" "), c.visit && "방문 " + c.visit.slice(5).replace("-", "/").replace("T", " "), c.deadline && "마감 " + c.deadline,
+      c.audit && ((n => n ? "검수 ✗ " + n + "개" : "검수 ✓")(c.audit.rows.filter(r => r.ok === false).length))].filter(Boolean).join(" · ");
     return `<div class="camp ${c.status === "done" ? "done" : ""}" data-id="${esc(c.id)}">
       <div class="dday ${d.cls}">${esc(d.t)}<small>${esc(KIND[c.kind] || "")}</small></div>
       <div class="main-c"><span class="kind ${esc(c.kind)}">${esc(KIND[c.kind] || "")}</span><b>${esc(c.brand)}</b> ${c.title ? "· " + esc(c.title) : ""}
         <div class="sub">${esc(sub) || "조건 없음"}</div></div>
       <span class="dots">${(c.platforms || []).map(picon).join("")}</span>
       <button class="btn main" data-act="write">${ic("pen")}${c.post ? "글 열기" : "글 쓰기"}</button>
+      <button class="btn" data-act="audit" title="올린 글 주소를 넣으면 키워드·태그·링크·사진 수·지도·협찬 표기를 확인해요">검수</button>
       <button class="btn" data-act="edit">고치기</button>
       ${c.status === "done" ? '<button class="btn" data-act="reopen">되돌리기</button>' : `<button class="btn" data-act="done">${ic("check")}완료</button>`}</div>`;
   }).join("") : `<div class="blank">${f === "done" ? "완료한 캠페인이 없어요." : "진행 중인 캠페인이 없어요. 「새 캠페인」으로 추가하세요."}</div>`;
@@ -1385,6 +1415,7 @@ async function campAct(id, act) {
   const c = camp(id);
   if (!c) return;
   if (act === "edit") return campEdit(c);
+  if (act === "audit") return campAudit(c);
   if (act === "write") {
     if (Object.values(S.busy).some(Boolean)) return toast("글을 만드는 중이에요. 끝난 뒤에 해 주세요.");
     if (c.post) {
@@ -1409,6 +1440,24 @@ async function campAct(id, act) {
   }
 }
 
+// 올린 뒤 검수 — 올린 글을 읽어 조건 확인, 업체 보고 글 복사
+async function campAudit(c) {
+  const url = (prompt("올린 글 주소를 넣어 주세요 (네이버 블로그는 글 주소 그대로)", c.posted_url || "") || "").trim();
+  if (!url) return;
+  const box = $("#auditBox");
+  box.hidden = false; box.innerHTML = `<b>${esc(c.brand)}</b> 검수 중… 글을 읽고 있어요`;
+  try {
+    const d = await api("/api/audit", { id: c.id, url });
+    const bad = d.rows.filter(r => r.ok === false).length;
+    box.innerHTML = `<div class="row between"><h3>${esc(c.brand)} 검수 — ${bad ? "✗ " + bad + "개 빠졌어요" : "✓ 다 지켰어요"}</h3><button class="btn" id="auditClose">닫기</button></div>
+      ${d.rows.map(r => `<div style="${r.ok === false ? "color:var(--bad)" : ""}">${r.ok === true ? "✓" : r.ok === false ? "✗" : "·"} <b>${esc(r.item)}</b> — ${esc(r.detail)}</div>`).join("")}
+      <div class="row" style="margin-top:10px"><button class="btn main" id="auditCopy">${ic("copy")}업체 보고 글 복사</button><span class="hint">사진·지도 수는 네이버 블로그 기준이에요. 보내기 전에 한 번 읽어 보세요.</span></div>`;
+    $("#auditClose").onclick = () => box.hidden = true;
+    $("#auditCopy").onclick = () => copyText(d.report).then(() => toast("보고 글을 복사했어요."), fail);
+    await loadCamps();
+  } catch (e) { box.hidden = true; fail(e); }
+}
+
 function kwRow(k) {
   const r = document.createElement("div");
   r.className = "kw";
@@ -1423,6 +1472,8 @@ function campEdit(c) {
   [["cBrand", "brand"], ["cTitle", "title"], ["cStart", "start"], ["cDeadline", "deadline"], ["cProvided", "provided"], ["cPrice", "price"],
    ["cSale", "sale_price"], ["cRate", "rate"], ["cTags", "tags"], ["cNotes", "notes"]].forEach(([id, k]) => $("#" + id).value = c[k] || "");
   $("#cLinks").value = (c.links || []).join("\n");
+  $("#cMinPhotos").value = c.min_photos || ""; $("#cNeedMap").checked = !!c.need_map;
+  $("#cVisit").value = c.visit || "";
   $("#cPlats").innerHTML = S.platforms.map(p => `<label style="${pc(p.id)}"><input type="checkbox" value="${esc(p.id)}" ${(c.platforms || []).includes(p.id) ? "checked" : ""}>${picon(p.id)}${esc(p.name)}</label>`).join("");
   $("#cKws").innerHTML = "";
   (c.keywords && c.keywords.length ? c.keywords : [null]).forEach(kwRow);
@@ -1431,7 +1482,10 @@ function campEdit(c) {
   $("#campForm").hidden = false;
   $("#cBrand").focus();
 }
-function kindView() { document.querySelectorAll("#campForm .gb").forEach(e => e.hidden = $("#cKind").value !== "groupbuy"); }
+function kindView() {
+  document.querySelectorAll("#campForm .gb").forEach(e => e.hidden = $("#cKind").value !== "groupbuy");
+  document.querySelectorAll("#campForm .ngb").forEach(e => e.hidden = $("#cKind").value === "groupbuy");
+}
 $("#cKind").onchange = kindView;
 $("#campNew").onclick = () => campEdit(null);
 $("#cKwAdd").onclick = () => kwRow(null);
@@ -1446,6 +1500,8 @@ $("#cSave").onclick = async () => {
     platforms: [...document.querySelectorAll("#cPlats input:checked")].map(i => i.value),
     keywords: [...document.querySelectorAll("#cKws .kw")].map(r => ({ word: r.querySelector(".w").value.trim(), min: +r.querySelector(".n").value || 1 })).filter(k => k.word),
     tags: $("#cTags").value.trim(), links: $("#cLinks").value.split("\n").map(s => s.trim()).filter(Boolean), notes: $("#cNotes").value.trim(),
+    min_photos: Math.max(0, +$("#cMinPhotos").value || 0), need_map: $("#cNeedMap").checked,
+    visit: $("#cKind").value === "groupbuy" ? "" : $("#cVisit").value,
     status: old.status || "open" });
   if (item.links.some(u => !/^https?:\/\//.test(u))) return toast("링크는 http:// 나 https:// 로 시작해야 해요.");
   try {
@@ -1551,8 +1607,10 @@ $("#lCsv").onclick = () => {
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 };
 
-loadState().then(loadCampsQuiet).then(due => {
-  if (due && due.length) toast("마감이 다가온 캠페인이 " + due.length + "개 있어요 — 캠페인 탭을 보세요.");
+loadState().then(loadCampsQuiet).then(due => {           // 앱을 열 때 한 번 — 오늘·내일 일정이 먼저, 없으면 마감 임박
+  const soon = schedule().filter(e => e.n >= 0 && e.n <= 1);
+  if (soon.length) toast("📅 " + soon.map(e => (e.n ? "내일 " : "오늘 ") + e.what + " " + e.brand + (e.time ? " " + e.time : "")).join(" · "));
+  else if (due && due.length) toast("마감이 다가온 캠페인이 " + due.length + "개 있어요 — 캠페인 탭을 보세요.");
 }).catch(fail);
 </script>
 </body>

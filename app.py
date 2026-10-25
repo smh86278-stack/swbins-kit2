@@ -31,6 +31,8 @@ import zipfile
 from datetime import datetime
 
 import ai
+import audit
+import cal
 import gen
 import refs
 import store
@@ -565,6 +567,17 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 return self.send(200, growth())
             if u.path == "/api/data":
                 return self.send(200, data_status())
+            if u.path == "/api/calendar.ics":               # 캠페인 일정 → 달력 파일(id 가 있으면 그 캠페인만)
+                camps = [c for c in load_items("campaigns") if not q.get("id") or c.get("id") == q["id"]]
+                body = cal.ics(cal.events(camps)).encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "text/calendar; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.send_header("Content-Disposition", 'attachment; filename="postkit-%s.ics"' % datetime.now().strftime("%Y%m%d"))
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(body)
+                return
             if u.path == "/api/backup.zip":                 # 백업 파일 받기 — 브라우저가 내려받기로 저장
                 os.makedirs(BACKUPS, exist_ok=True)
                 photos = q.get("photos") == "1"
@@ -682,6 +695,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 if "refs" in b:
                     write_text(os.path.join(d, "refs.txt"), "\n".join(refs.parse_urls(str(b["refs"] or ""))))
                 return self.send(200, {"ok": True})
+            if u.path == "/api/audit":                  # 올린 뒤 검수 — 올린 글 주소를 읽어 캠페인 조건을 다 지켰나
+                c = next((x for x in load_items("campaigns") if x.get("id") == b.get("id")), None)
+                if not c:
+                    raise ValueError("없는 캠페인입니다.")
+                url = str(b.get("url") or "").strip()
+                f = audit.facts(url)
+                rows = audit.check(f, c)
+                c = save_item("campaigns", dict(c, posted_url=url, audit={"ts": datetime.now().isoformat(timespec="minutes"), "rows": rows}))
+                return self.send(200, {"rows": rows, "report": audit.report(c, f, rows), "campaign": c})
             if u.path == "/api/refs":                   # 참고 글 미리 읽어 보기 — 제목·글자 수·못 읽은 까닭
                 rows = refs.load(post_path(b.get("name", "")), fresh=True)
                 return self.send(200, [{"url": r["url"], "title": r["title"], "chars": len(r["text"]), "error": r["error"]} for r in rows])

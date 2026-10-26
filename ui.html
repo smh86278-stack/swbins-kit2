@@ -550,12 +550,16 @@ body:not(.os-win) .win-only, body:not(.os-mac) .mac-only { display: none !import
     <div class="head"><div><h1>체험단 · 협찬 · 공구</h1><p>조건을 적어 두면 글에 넣고, 빠진 건 짚어 줘요. 협찬 표기도 넣어요.</p></div>
       <button class="btn main" id="campNew"><svg class="i" data-i="plus"></svg>새 캠페인</button></div>
     <div class="box form" id="campForm" hidden>
+      <details id="cPasteBox" style="margin-bottom:10px"><summary class="small" style="cursor:pointer">📋 업체 안내문 붙여 넣고 자동으로 채우기</summary>
+        <textarea id="cPaste" rows="5" placeholder="체험단 사이트·업체가 보낸 안내문을 통째로 붙여 넣으세요 — 업체명·키워드·태그·링크·마감·사진 수 등을 AI 가 읽어 아래 칸에 채워요"></textarea>
+        <div class="row" style="margin-top:6px;gap:6px"><button class="btn main" id="cParse">채우기</button><span class="hint" id="cParseInfo">채운 뒤 꼭 한 번 보고 「저장」하세요</span></div>
+      </details>
       <div class="fgrid">
         <label>종류<select id="cKind"><option value="experience">체험단</option><option value="sponsor">협찬</option><option value="groupbuy">공구</option></select></label>
         <label>업체·브랜드 *<input type="text" id="cBrand" placeholder="예) OO식당"></label>
         <label>캠페인 이름<input type="text" id="cTitle" placeholder="예) 10월 신메뉴 체험단"></label>
         <label class="gb">공구 시작일<input type="date" id="cStart"></label>
-        <label class="ngb">방문·체험 예약 (날짜·시간)<input type="datetime-local" id="cVisit"></label>
+        <label class="ngb">방문·체험 예약 (날짜·시간 — 시간 모르면 0시 = 하루 종일)<input type="datetime-local" id="cVisit"></label>
         <label>마감일(글 올릴 기한 · 공구 마감)<input type="date" id="cDeadline"></label>
         <label>제공받은 것<input type="text" id="cProvided" placeholder="예) 2인 식사권 · 제품 1개"></label>
         <label class="gb">정가<input type="text" id="cPrice" placeholder="39,000원"></label>
@@ -1404,7 +1408,7 @@ function schedule() {
   S.camps.filter(c => c.status !== "done").forEach(c => [["visit", c.visit], ["deadline", c.deadline], ["start", c.kind === "groupbuy" && c.start]].forEach(([k, v]) => {
     if (!v) return;
     const [date, time = ""] = v.split("T");
-    out.push({ id: c.id, kind: k, what: EV[k], brand: c.brand, date, time: time.slice(0, 5), n: Math.round((new Date(date) - new Date(today())) / 86400000) });
+    out.push({ id: c.id, kind: k, what: EV[k], brand: c.brand, date, time: time.slice(0, 5) === "00:00" ? "" : time.slice(0, 5), n: Math.round((new Date(date) - new Date(today())) / 86400000) });
   }));
   return out.sort((a, b) => (a.date + (a.time || "99")).localeCompare(b.date + (b.time || "99")));
 }
@@ -1426,7 +1430,7 @@ function renderCamps() {
   $("#campList").innerHTML = rows.length ? rows.map(c => {
     const d = dday(c);
     const sub = [c.provided && "제공 " + c.provided, c.kind === "groupbuy" && c.sale_price && "가격 " + (c.price ? c.price + " → " : "") + c.sale_price,
-      (c.keywords || []).filter(k => k.word).map(k => k.word + "×" + (k.min || 1)).join(" "), c.visit && "방문 " + c.visit.slice(5).replace("-", "/").replace("T", " "), c.deadline && "마감 " + c.deadline,
+      (c.keywords || []).filter(k => k.word).map(k => k.word + "×" + (k.min || 1)).join(" "), c.visit && "방문 " + c.visit.slice(5).replace("-", "/").replace("T", " ").replace(" 00:00", ""), c.deadline && "마감 " + c.deadline,
       c.audit && ((n => n ? "검수 ✗ " + n + "개" : "검수 ✓")(c.audit.rows.filter(r => r.ok === false).length))].filter(Boolean).join(" · ");
     return `<div class="camp ${c.status === "done" ? "done" : ""}" data-id="${esc(c.id)}">
       <div class="dday ${d.cls}">${esc(d.t)}<small>${esc(KIND[c.kind] || "")}</small></div>
@@ -1506,7 +1510,7 @@ function campEdit(c) {
    ["cSale", "sale_price"], ["cRate", "rate"], ["cTags", "tags"], ["cNotes", "notes"]].forEach(([id, k]) => $("#" + id).value = c[k] || "");
   $("#cLinks").value = (c.links || []).join("\n");
   $("#cMinPhotos").value = c.min_photos || ""; $("#cNeedMap").checked = !!c.need_map;
-  $("#cVisit").value = c.visit || "";
+  $("#cVisit").value = c.visit && c.visit.length === 10 ? c.visit + "T00:00" : c.visit || "";   // 날짜만 있으면 0시 = 하루 종일
   $("#cPlats").innerHTML = S.platforms.map(p => `<label style="${pc(p.id)}"><input type="checkbox" value="${esc(p.id)}" ${(c.platforms || []).includes(p.id) ? "checked" : ""}>${picon(p.id)}${esc(p.name)}</label>`).join("");
   $("#cKws").innerHTML = "";
   (c.keywords && c.keywords.length ? c.keywords : [null]).forEach(kwRow);
@@ -1520,7 +1524,24 @@ function kindView() {
   document.querySelectorAll("#campForm .ngb").forEach(e => e.hidden = $("#cKind").value === "groupbuy");
 }
 $("#cKind").onchange = kindView;
-$("#campNew").onclick = () => campEdit(null);
+$("#campNew").onclick = () => { $("#cPaste").value = ""; $("#cPasteBox").open = true; campEdit(null); };
+$("#cParse").onclick = async () => {                       // 안내문 → AI 가 읽어 칸 채우기(campparse.py). 저장은 사용자가 확인하고
+  const text = $("#cPaste").value.trim();
+  if (text.length < 20) return toast("안내문을 붙여 넣어 주세요.");
+  const btn = $("#cParse"), info = $("#cParseInfo");
+  btn.disabled = true; info.textContent = "AI 가 읽는 중… (1분쯤 걸려요)";
+  try {
+    const d = await api("/api/campaign/parse", { text });
+    const old = camp(S.editCamp) || {};
+    campEdit(Object.assign({}, old, Object.fromEntries(Object.entries(d).filter(([, v]) => v !== "" && !(Array.isArray(v) && !v.length) && v !== 0 && v !== false)),
+      { id: S.editCamp || undefined, status: old.status }));
+    $("#cPasteBox").open = true;
+    const got = [d.brand && "업체", d.keywords.length && "키워드 " + d.keywords.length + "개", d.tags && "태그", d.links.length && "링크 " + d.links.length + "개",
+      d.deadline && "마감", d.visit && "방문일", d.min_photos && "사진 " + d.min_photos + "장", d.need_map && "지도 필수"].filter(Boolean);
+    info.textContent = got.length ? "채웠어요: " + got.join(" · ") + " — 한 번 보고 「저장」하세요" : "찾은 게 없어요. 직접 채워 주세요.";
+  } catch (e) { info.textContent = "채우기에 실패했어요."; fail(e); }
+  btn.disabled = false;
+};
 $("#cKwAdd").onclick = () => kwRow(null);
 $("#cCancel").onclick = () => $("#campForm").hidden = true;
 $("#cSave").onclick = async () => {

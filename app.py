@@ -33,6 +33,7 @@ from datetime import datetime
 import ai
 import audit
 import cal
+import campparse
 import gen
 import keywords
 import refs
@@ -721,6 +722,20 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 if "refs" in b:
                     write_text(os.path.join(d, "refs.txt"), "\n".join(refs.parse_urls(str(b["refs"] or ""))))
                 return self.send(200, {"ok": True})
+            if u.path == "/api/campaign/parse":         # 업체 안내문 → 캠페인 칸(AI 가 읽고 campparse 가 확인) — 저장은 화면에서
+                text = str(b.get("text") or "").strip()
+                if len(text) < 20:
+                    raise ValueError("안내문을 붙여 넣어 주세요.")
+                s = ai.settings(load_cfg())
+                why = ai.not_ready(s)
+                if why:
+                    raise ValueError(why)
+                work = os.path.join(LOCALDATA, "parse")
+                os.makedirs(work, exist_ok=True)
+                r = ai.run(s, campparse.prompt(text), work, timeout=180)
+                if not r["text"]:
+                    raise ValueError(r["error"] or "AI 가 답하지 않았어요.")
+                return self.send(200, campparse.normalize(campparse.parse_reply(r["text"]), text))
             if u.path == "/api/audit":                  # 올린 뒤 검수 — 올린 글 주소를 읽어 캠페인 조건을 다 지켰나
                 c = next((x for x in load_items("campaigns") if x.get("id") == b.get("id")), None)
                 if not c:

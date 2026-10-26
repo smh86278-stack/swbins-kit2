@@ -21,7 +21,8 @@ def events(camps):
             if not v or (kind == "start" and c.get("kind") != "groupbuy"):
                 continue
             date, _, time = v.partition("T")
-            out.append({"camp": c.get("id", ""), "kind": kind, "date": date, "time": time[:5],
+            time = "" if time[:5] == "00:00" else time[:5]          # 0시 = 시간 모름 → 하루 종일
+            out.append({"camp": c.get("id", ""), "kind": kind, "date": date, "time": time,
                         "title": "%s — %s" % (KINDS[kind], name)})
     return sorted(out, key=lambda e: (e["date"], e["time"] or "99"))
 

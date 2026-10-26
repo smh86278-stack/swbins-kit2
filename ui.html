@@ -540,6 +540,7 @@ body:not(.os-win) .win-only, body:not(.os-mac) .mac-only { display: none !import
         <button class="btn" id="growAll">모두 고르기</button>
         <span class="hint" id="growCount"></span>
         <span class="grow"></span>
+        <button class="btn" id="growAlbum" title="고른 기록으로 A4 앨범 PDF — 표지 + 기록마다 한 쪽(사진 최대 4장)">📕 앨범 PDF</button>
         <button class="btn main" id="growCompose"><svg class="i" data-i="pen"></svg>고른 기록 모아서 글 쓰기</button>
       </div>
       <div id="growList"></div>
@@ -1299,7 +1300,7 @@ async function loadGrowth() {
   }
   let html = "", last = null;
   for (const e of d.entries) {
-    if (e.month !== last) { html += `<div class="gmonth"><b>생후 ${e.month}개월</b></div>`; last = e.month; }
+    if (e.month !== last) { html += `<div class="gmonth" data-month="${e.month}" style="cursor:pointer" title="눌러서 이 달 기록을 모두 고르기·풀기"><b>생후 ${e.month}개월</b> <span class="hint">이 달 모두 고르기</span></div>`; last = e.month; }
     const kids = [e.first && `<b>${esc(a)}</b> ${esc(e.first)}`, e.second && `<b>${esc(b)}</b> ${esc(e.second)}`].filter(Boolean).join(" · ");
     html += `<div class="gitem ${S.growPick.has(e.name) ? "on" : ""}" data-name="${esc(e.name)}"><span class="ck">✓</span>
       ${e.photo ? `<img src="/api/photo?name=${encodeURIComponent(e.name)}&file=${encodeURIComponent(e.photo)}" alt="">` : ""}
@@ -1308,6 +1309,11 @@ async function loadGrowth() {
       <button class="btn op" data-open="${esc(e.name)}">열기</button></div>`;
   }
   $("#growList").innerHTML = html;
+  $("#growList").querySelectorAll(".gmonth").forEach(el => el.onclick = () => {     // 월간 앨범 — 그 달 기록을 한 번에
+    const ns = d.entries.filter(e => e.month === +el.dataset.month).map(e => e.name), all = ns.every(n => S.growPick.has(n));
+    ns.forEach(n => all ? S.growPick.delete(n) : S.growPick.add(n));
+    loadGrowth();
+  });
   $("#growList").querySelectorAll(".gitem").forEach(el => el.onclick = ev => {
     if (ev.target.dataset.open) return openPost(ev.target.dataset.open);
     const n = el.dataset.name;
@@ -1321,6 +1327,7 @@ function growCount() {
   const n = [...S.growPick].filter(x => (S.growth?.entries || []).some(e => e.name === x)).length;
   $("#growCount").textContent = n ? n + "개 골랐어요" : "기록을 눌러 고르세요";
   $("#growCompose").disabled = !n;
+  $("#growAlbum").disabled = !n;
 }
 $("#growAll").onclick = () => {
   const all = (S.growth?.entries || []).map(e => e.name);
@@ -1336,6 +1343,107 @@ $("#growCompose").onclick = async () => {
     await openPost(name);
     toast("기록을 모은 메모와 대표 사진을 넣었어요. 「지금 마음」을 채우고 글을 만들어 보세요.");
   } catch (e) { fail(e); }
+};
+
+// ---------- 📕 둥이 앨범 PDF (화면 캔버스로 A4 쪽을 그리고, 작은 PDF 작성기로 묶는다 — 서버·pip 없이, 폰에서도) ----------
+const PG = { w: 1240, h: 1754, pad: 90 };                  // A4 150dpi
+function pdfFromJpegs(pages) {                             // [{bytes: Uint8Array(JPEG), w, h}] → PDF Blob(쪽마다 사진 한 장을 A4 에 꽉)
+  const enc = new TextEncoder(), parts = [], offs = [];
+  let len = 0;
+  const put = x => { const b = typeof x === "string" ? enc.encode(x) : x; parts.push(b); len += b.length; };
+  const obj = (n, body) => { offs[n] = len; put(`${n} 0 obj\n`); body(); put("\nendobj\n"); };
+  const A4 = [595.28, 841.89], n = pages.length;
+  put("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n");
+  obj(1, () => put("<< /Type /Catalog /Pages 2 0 R >>"));
+  obj(2, () => put(`<< /Type /Pages /Count ${n} /Kids [${pages.map((_, i) => `${3 + i * 3} 0 R`).join(" ")}] >>`));
+  pages.forEach((p, i) => {
+    const pg = 3 + i * 3, ct = pg + 1, im = pg + 2, draw = `q ${A4[0]} 0 0 ${A4[1]} 0 0 cm /Im0 Do Q`;
+    obj(pg, () => put(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${A4[0]} ${A4[1]}] /Resources << /XObject << /Im0 ${im} 0 R >> >> /Contents ${ct} 0 R >>`));
+    obj(ct, () => put(`<< /Length ${draw.length} >>\nstream\n${draw}\nendstream`));
+    obj(im, () => { put(`<< /Type /XObject /Subtype /Image /Width ${p.w} /Height ${p.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${p.bytes.length} >>\nstream\n`); put(p.bytes); put("\nendstream"); });
+  });
+  const xref = len, total = 3 + n * 3;
+  put(`xref\n0 ${total}\n0000000000 65535 f \n` + Array.from({ length: total - 1 }, (_, i) => String(offs[i + 1]).padStart(10, "0") + " 00000 n \n").join(""));
+  put(`trailer\n<< /Size ${total} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+  return new Blob(parts, { type: "application/pdf" });
+}
+async function albumImg(name, file) {
+  const im = new Image();
+  im.src = `/api/photo?name=${encodeURIComponent(name)}&file=${encodeURIComponent(file)}`;
+  await im.decode();
+  return im;
+}
+function albumText(g, text, x, y, maxW, size, weight, color, maxLines = 4) {     // 줄바꿈해 쓰고 쓴 높이를 돌려준다
+  g.font = `${weight} ${size}px ${CK_FONT}`; g.fillStyle = color; g.textAlign = "left"; g.textBaseline = "top";
+  const lines = ckWrap(g, text, maxW).slice(0, maxLines);
+  lines.forEach((l, i) => g.fillText(l, x, y + i * size * 1.45));
+  return lines.length * size * 1.45;
+}
+async function albumPages(entries, names, color) {
+  const [a, b] = [names[0] || "첫째", names[1] || "둘째"], months = [...new Set(entries.map(e => e.month))];
+  const range = months.length > 1 ? `생후 ${months[0]}~${months[months.length - 1]}개월` : `생후 ${months[0]}개월`;
+  const pages = [], page = () => { const cv = document.createElement("canvas"); cv.width = PG.w; cv.height = PG.h; const g = cv.getContext("2d"); g.fillStyle = "#fffdf9"; g.fillRect(0, 0, PG.w, PG.h); return [cv, g]; };
+  // 표지 — 첫 기록의 대표 사진 + 이름 + 개월 수
+  {
+    const [cv, g] = page();
+    const first = entries.find(e => e.photo);
+    if (first) ckCover(g, await albumImg(first.name, first.photo), 0, 0, PG.w, 1180);
+    g.fillStyle = color; g.fillRect(PG.pad, 1250, 120, 12);
+    albumText(g, `${a} · ${b}`, PG.pad, 1300, PG.w - PG.pad * 2, 110, 800, "#1f2430", 1);
+    albumText(g, range + " 앨범", PG.pad, 1450, PG.w - PG.pad * 2, 60, 700, color, 1);
+    const dates = entries.map(e => e.date).filter(Boolean);
+    if (dates.length) albumText(g, dates[0] === dates[dates.length - 1] ? dates[0] : `${dates[0]} ~ ${dates[dates.length - 1]}`, PG.pad, 1550, PG.w, 40, 500, "#6b7280", 1);
+    pages.push(cv);
+  }
+  // 기록마다 한 쪽 — 사진(그 글의 사진 최대 4장) + 개월 수·날짜 + 장면 + 둘의 이야기
+  for (const e of entries) {
+    const [cv, g] = page();
+    const post = await api("/api/post?name=" + encodeURIComponent(e.name)).catch(() => ({ photos: e.photo ? [e.photo] : [] }));
+    const ph = (post.photos || []).slice(0, 4), top = PG.pad, W = PG.w - PG.pad * 2, gap = 24, H = 900;
+    const imgs = [];
+    for (const f of ph) { try { imgs.push(await albumImg(e.name, f)); } catch (err) { /* 못 읽은 사진은 뺀다 */ } }
+    if (imgs.length === 1) ckCover(g, imgs[0], PG.pad, top, W, H);
+    else if (imgs.length === 2) imgs.forEach((im, i) => ckCover(g, im, PG.pad + i * (W + gap) / 2, top, (W - gap) / 2, H));
+    else if (imgs.length >= 3) {
+      ckCover(g, imgs[0], PG.pad, top, W, H * 0.6);
+      const rest = imgs.slice(1), sw = (W - gap * (rest.length - 1)) / rest.length;
+      rest.forEach((im, i) => ckCover(g, im, PG.pad + i * (sw + gap), top + H * 0.6 + gap, sw, H * 0.4 - gap));
+    }
+    let y = top + (imgs.length ? H + 60 : 0);
+    g.fillStyle = color; g.fillRect(PG.pad, y + 6, 10, 56);
+    y += albumText(g, e.age + (e.date ? "  ·  " + e.date : ""), PG.pad + 34, y, W - 34, 48, 800, "#1f2430", 1) + 24;
+    if (e.scene) y += albumText(g, e.scene, PG.pad, y, W, 40, 600, "#1f2430", 3) + 22;
+    for (const [label, v] of [[a, e.first], [b, e.second], ["새로 한 것", e.new], ["웃겼던 순간", e.funny]]) {
+      if (!v || y > PG.h - 160) continue;
+      g.font = `800 34px ${CK_FONT}`; g.fillStyle = color; g.textAlign = "left"; g.textBaseline = "top"; g.fillText(label, PG.pad, y);
+      const lw = Math.max(g.measureText(label).width + 28, 200);
+      y += Math.max(albumText(g, v, PG.pad + lw, y, W - lw, 34, 500, "#374151", 3), 50) + 14;
+    }
+    g.font = `500 26px ${CK_FONT}`; g.fillStyle = "#9ca3af"; g.textAlign = "right"; g.textBaseline = "bottom";
+    g.fillText(`${pages.length + 1}`, PG.w - PG.pad, PG.h - 50);
+    pages.push(cv);
+  }
+  return { pages, range };
+}
+$("#growAlbum").onclick = async () => {
+  const entries = (S.growth?.entries || []).filter(e => S.growPick.has(e.name));
+  if (!entries.length) return toast("앨범에 넣을 기록을 골라 주세요(달 이름을 누르면 그 달 모두).");
+  const btn = $("#growAlbum"); btn.disabled = true; btn.textContent = "만드는 중…";
+  try {
+    const { pages, range } = await albumPages(entries, S.growth.names || [], $("#ckColor").value || "#ff7a59");
+    const jpegs = [];
+    for (const cv of pages) {
+      const blob = await new Promise(r => cv.toBlob(r, "image/jpeg", 0.88));
+      jpegs.push({ bytes: new Uint8Array(await blob.arrayBuffer()), w: cv.width, h: cv.height });
+    }
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(pdfFromJpegs(jpegs));
+    a.download = `둥이앨범-${range.replace(/\s/g, "")}.pdf`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    toast(`앨범 PDF ${pages.length}쪽을 받았어요 — 내려받기 폴더를 보세요.`);
+  } catch (e) { fail(e); }
+  btn.disabled = false; btn.textContent = "📕 앨범 PDF";
 };
 
 // ---------- 폰에서 쓰기(PC 쪽 켜고 끄기) ----------

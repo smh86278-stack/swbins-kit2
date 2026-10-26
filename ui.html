@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>글 도우미</title>
+<title>둥이로그</title>
 <link rel="icon" href="/icon.png">
 <link rel="apple-touch-icon" href="/icon.png">
-<meta name="apple-mobile-web-app-title" content="글 도우미">
+<meta name="apple-mobile-web-app-title" content="둥이로그">
 <meta name="theme-color" content="#f7f7f8">
 <script>
 // 색 테마 — 그리기 전에 붙여야 깜빡이지 않는다. 기억은 이 창(브라우저)에만(localStorage)
@@ -374,7 +374,7 @@ body:not(.os-win) .win-only, body:not(.os-mac) .mac-only { display: none !import
 </head>
 <body>
 <nav aria-label="메뉴">
-  <div class="logo"><span class="mark" aria-hidden="true">글</span><b>글 도우미<small>내 말투로 쓰는 SNS 글</small></b></div>
+  <div class="logo"><span class="mark" aria-hidden="true">둥</span><b>둥이로그<small>쌍둥이 육아·체험단 글을 내 말투로</small></b></div>
   <button data-tab="write" class="on"><svg class="i" data-i="pen"></svg>쓰기</button>
   <button data-tab="voice"><svg class="i" data-i="voice"></svg>내 말투</button>
   <button data-tab="posts"><svg class="i" data-i="file"></svg>지난 글</button>
@@ -604,7 +604,7 @@ body:not(.os-win) .win-only, body:not(.os-mac) .mac-only { display: none !import
         <h2><svg class="i" data-i="flag"></svg>처음 한 번만</h2>
         <ol>
           <li><b>Claude Code</b> 를 설치하고 터미널에서 <code>claude</code> 를 한 번 실행해 로그인해요. Codex·Gemini CLI·로컬 AI(Ollama)는 <b>설정 → AI 고르기</b>에서 바꿔요.</li>
-          <li>왼쪽 아래에 <b>초록 점</b>이 보이면 준비 끝. <span class="win-only">처음 켜면 바탕 화면·시작 메뉴에 <b>글 도우미</b> 바로가기가 생겨요.</span><span class="mac-only"><b>PostKit.app</b> 을 응용 프로그램 폴더로 옮기고 Dock 에 두면 편해요. 창을 닫았다가 바로 다시 켜지지 않으면 1분쯤 뒤에 다시 켜요.</span></li>
+          <li>왼쪽 아래에 <b>초록 점</b>이 보이면 준비 끝. <span class="win-only">처음 켜면 바탕 화면·시작 메뉴에 <b>둥이로그</b> 바로가기가 생겨요.</span><span class="mac-only"><b>DungiLog.app</b> 을 응용 프로그램 폴더로 옮기고 Dock 에 두면 편해요. 창을 닫았다가 바로 다시 켜지지 않으면 1분쯤 뒤에 다시 켜요.</span></li>
           <li><b>내 말투</b>에 직접 쓴 글을 3~5편 넣어 두면 훨씬 내 글 같아져요.</li>
           <li>네이버 카페에 올린다면 <b>설정</b>에 카페 글쓰기 주소를 넣어요.</li>
         </ol>
@@ -672,7 +672,7 @@ body:not(.os-win) .win-only, body:not(.os-mac) .mac-only { display: none !import
         <details><summary>왜 자동으로 올려 주지 않나요?</summary><p>네이버는 자동 프로그램으로 글을 올리는 걸 약관으로 막고 있어서, 걸리면 저품질 처리나 계정 정지가 될 수 있어요. 그래서 글 만들기까지만 하고 올리기는 직접 해요.</p></details>
         <details><summary>협찬·광고 글은요?</summary><p>메모에 <code>#협찬</code> 이나 <code>#광고</code> 를 넣으면 첫 줄에 표기 문장이 들어가요. 협찬 글에 표기를 빼면 표시광고법 위반이 될 수 있어요.</p></details>
         <details><summary>글이 안 나오고 오류가 떠요.</summary><p>왼쪽 아래가 빨간 점이면 고른 AI 를 못 찾은 거예요. <b>설정 → AI 고르기</b>에 설치 방법이 있어요 — 설치하고 터미널에서 한 번 실행해 로그인한 뒤 「다시 확인」을 눌러요. 로컬 AI(Ollama)는 Ollama 가 켜져 있고 모델을 받아 둬야 해요. 사용량 한도에 걸려도 오류가 나요 — 잠시 뒤 다시 해 보세요.</p></details>
-        <details><summary>만든 글과 사진은 어디에 저장되나요? 백업은요?</summary><p>처음엔 이 PC 의 <code>%APPDATA%\PostKit</code> 에 있어요. <b>설정 → 데이터 · 백업</b>에서 OneDrive·구글 드라이브 폴더로 옮기면 백업이 저절로 되고, 다른 PC 에서 같은 폴더를 고르면 같은 데이터를 써요. 「백업 받기」로 zip 을 받아 둘 수도 있고, 앱이 하루 한 번 사진 빼고 자동 백업도 해요.</p></details>
+        <details><summary>만든 글과 사진은 어디에 저장되나요? 백업은요?</summary><p>처음엔 이 PC 의 <code>%APPDATA%\PostKit</code> 에 있어요(예전 이름 그대로). <b>설정 → 데이터 · 백업</b>에서 OneDrive·구글 드라이브 폴더로 옮기면 백업이 저절로 되고, 다른 PC 에서 같은 폴더를 고르면 같은 데이터를 써요. 「백업 받기」로 zip 을 받아 둘 수도 있고, 앱이 하루 한 번 사진 빼고 자동 백업도 해요.</p></details>
         <details><summary>성장 기록은 어떻게 모아요?</summary><p><b>지난 글 → 성장 기록</b>을 누르면 「개월 수」가 있는 육아 글이 개월 순서로 모여요. 기록을 골라 「모아서 글 쓰기」를 누르면 그 기록과 대표 사진으로 새 글이 열려요.</p></details>
         <details><summary>앱은 어떻게 끄나요?</summary><p>창을 닫으면 1분 안에 저절로 꺼져요. 글을 만드는 중이면 끝난 뒤에 꺼져요.</p></details>
       </div>
@@ -1234,7 +1234,7 @@ async function loadData() {
   $("#bkAuto").textContent = "자동 백업: 하루 한 번 사진 빼고 이 PC 에 최근 7개 — " + (autos.length ? "마지막 " + autos[0].name.slice(5, 13).replace(/(\d{4})(\d\d)(\d\d)/, "$1.$2.$3") + ", " + autos.length + "개" : "아직 없어요") + " (" + d.backups + ")";
 }
 async function moveData(path, label) {
-  if (!confirm(label + " 쪽으로 데이터 폴더를 옮길까요?\n\n· 거기에 글 도우미 데이터가 이미 있으면(다른 PC 에서 옮겨 둔 것) 그걸 그대로 써요.\n· 없으면 지금 데이터를 복사해요. 원래 자리의 데이터는 지우지 않아요.")) return;
+  if (!confirm(label + " 쪽으로 데이터 폴더를 옮길까요?\n\n· 거기에 둥이로그 데이터가 이미 있으면(다른 PC 에서 옮겨 둔 것) 그걸 그대로 써요.\n· 없으면 지금 데이터를 복사해요. 원래 자리의 데이터는 지우지 않아요.")) return;
   try {
     const r = await api("/api/data/move", { path });
     alert(r.used_existing ? "옮겼어요. 그 폴더에 있던 데이터를 쓰기 시작해요.\n" + r.dir
@@ -1335,7 +1335,7 @@ if (!PHONE) {
     try { showPhone(await api("/api/phone", { on })); if (on) toast("폰에서 쓰기를 켰어요."); } catch (e) { fail(e); }
   };
 }
-$("#mkLinks").onclick = () => api("/api/shortcuts", {}).then(() => toast("바탕 화면과 시작 메뉴에 「글 도우미」를 만들었어요.")).catch(fail);
+$("#mkLinks").onclick = () => api("/api/shortcuts", {}).then(() => toast("바탕 화면과 시작 메뉴에 「둥이로그」를 만들었어요.")).catch(fail);
 
 // ---------- 지난 글 ----------
 const day = n => /^\d{8}/.test(n) ? n.slice(4, 6) + "." + n.slice(6, 8) : "";

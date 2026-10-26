@@ -1,6 +1,7 @@
-# swbins-kit2 — 글 도우미 (개인 부업용 글쓰기 응용프로그램)
+# swbins-kit2 — 둥이로그 (쌍둥이 엄마·아빠의 글쓰기 응용프로그램)
 
-사진·메모를 넣으면 블로그·카페·인스타·틱톡용 글을 **내 말투로** 써 주고 다듬어 주는 응용프로그램 — 윈도우 `PostKit.exe` 하나, 맥 `PostKit.app`(2026-10-23 맥 지원 추가, 아래 「맥 지원」).
+사진·메모를 넣으면 블로그·카페·인스타·틱톡용 글을 **내 말투로** 써 주고 다듬어 주는 응용프로그램 — 윈도우 `DungiLog.exe` 하나, 맥 `DungiLog.app`(2026-10-23 맥 지원 추가, 아래 「맥 지원」).
+**이름**: 2026-10-26 「글 도우미(PostKit)」→ **둥이로그(DungiLog)** — 원래 쌍둥이 엄마·아빠가 쓰려고 만든 것. 바꾼 건 화면 이름·exe·앱 이름·릴리스 파일·바로가기(옛 「글 도우미.lnk」는 바로가기 만들 때 치움)뿐이고, **데이터 폴더(`%APPDATA%\PostKit` 등)·`POSTKIT_DATA`·백업 표시 `postkit-backup.json`·맥 번들 ID·달력 UID(`@postkit`)는 기존 데이터·권한·일정이 이어지게 일부러 그대로** 둔다 — 바꾸지 말 것.
 **올리는 건 사람이 한다** — 자동 발행·자동 로그인·브라우저 조작은 이 저장소에 넣지 않는다(네이버 약관·계정 정지 위험, 2026-10-19 사용자 결정).
 
 > 이 파일이 **정본**이다. 다른 PC 의 Claude Code 도 이 파일만 읽으면 이어서 할 수 있게 적는다 — 상태가 바뀌면 여기 「지금 상태」를 고친다.
@@ -29,7 +30,7 @@
 - OS 가 갈리는 곳은 `docs/ARCHITECTURE.md` 8절 표가 정본 — 데이터 `~/Library/Application Support/PostKit`(로컬 `…/PostKit-local`, 로그 `~/Library/Logs/PostKit`),
   앱 창 Chrome·Edge·Brave `--app`(없으면 기본 브라우저), 폴더 고르기 `osascript`, 바로가기 없음, 클라우드 `~/Library/CloudStorage`·iCloud,
   CLI 찾기는 로그인 셸 PATH + 흔한 설치 폴더(`gen.search_path`), 한글 파일 이름 NFC.
-- 빌드는 맥에서 `python build.py` → `dist/PostKit.app` + `dist/PostKit-mac.zip`(서명·공증 없음, arm64). CI 의 `build` 작업이 만들어 `PostKit-mac` 아티팩트로 14일 올려 둔다. 릴리스엔 아직 안 올림.
+- 빌드는 맥에서 `python build.py` → `dist/DungiLog.app` + `dist/DungiLog-mac.zip`(서명·공증 없음, arm64). CI 의 `build` 작업이 만들어 `DungiLog-mac` 아티팩트로 14일 올려 둔다. 릴리스엔 아직 안 올림.
 - **진짜 맥에서 아직 확인 못 한 것**: 처음 열기(Gatekeeper)·Chrome 앱 창이 뜨는지·폴더 고르기 창·Finder 로 켰을 때 claude 찾기·사진 끌어 놓기/⌘V·서식 복사·폰에서 쓰기 방화벽 묻기·창 닫은 뒤 다시 켜기.
 
 **사용자 결정·취향**(다시 묻지 말 것):
@@ -88,13 +89,13 @@ cd C:\swbins-kit2 && claude                                                     
   `POSTKIT_DATA=... python -X utf8 -c "import app; app.PORT=8651; app.main()" --no-window` 로 띄우고 Playwright 로 연다(사용자 창을 잡지 않게).
 - 앱은 창이 닫혀 `/api/ping` 신호가 45초 끊기면 스스로 끝난다 — 살았는지 볼 땐 `/api/state` 를 부른다(`/api/ping` 은 신호를 다시 켠다).
 - 서버 코드(app.py)를 고치면 다시 띄워야 하고, ui.html 만 고치면 새로고침이면 된다.
-- 띄워 둔 `PostKit.exe` 가 있으면 빌드가 덮어쓰지 못한다 — `Get-Process PostKit | Stop-Process` 후 빌드.
+- 띄워 둔 `DungiLog.exe` 가 있으면 빌드가 덮어쓰지 못한다 — `Get-Process DungiLog | Stop-Process` 후 빌드.
 - ui.html: `[hidden]` 은 맨 위 `display:none !important` 규칙으로 이긴다(없으면 display 규칙에 덮인다).
 - 회사망 PC 에선 **pip·파이썬 urllib 이 SSL 검사에 막힌다**(self signed) — 인증서 검사를 끄지 말고 의존성 없이 짠다(qr.py 가 그래서 자체 구현). curl·git 은 된다.
 - 실제 claude 호출 시험은 한 번에 30초쯤, 사용량을 먹으니 꼭 필요한 것만. codex·gemini 도 마찬가지 — 자동 시험은 test_ai 의 가짜로.
 - 맥에서 깨지는 게 있는지는 CI 로만 본다 — 결과는 `gh` 가 없으니 `git credential fill` 토큰으로 GitHub API(`actions/runs`·`jobs/<id>/logs`), 토큰은 화면·파일에 남기지 않는다.
   CLI 를 '없음'으로 만드는 시험은 PATH 만 비우면 안 된다 — `gen.extra_dirs`·`_login_shell_path` 도 비운다(test_ai `test_missing_cli`).
-- `tests/smoke.py` 는 8650 에 이미 앱이 떠 있으면 멈춘다(실제 데이터 보호). 이 PC 에서 돌릴 땐 띄워 둔 PostKit 을 먼저 끈다.
+- `tests/smoke.py` 는 8650 에 이미 앱이 떠 있으면 멈춘다(실제 데이터 보호). 이 PC 에서 돌릴 땐 띄워 둔 둥이로그를 먼저 끈다.
 - 이 PC(회사망) 기본 파이썬엔 Pillow 가 pip SSL 에 막혀 없다 — 사진 시험(PhotoTest)은 Pillow 가 없으면 **건너뛴다**(skip, 실패 아님). 전부 돌리려면 Pillow 있는 파이썬(이 PC: `C:\swbins2\tools\macro-hub\.venv\Scripts\python.exe`)으로 `-m unittest discover tests`.
 
 ## git · 릴리스
@@ -102,6 +103,6 @@ cd C:\swbins-kit2 && claude                                                     
 브랜치 `main` 하나, 원격 `origin` = github.com/smh86278-stack/swbins-kit2 (private). 원격 주소에 계정 이름을 넣어 둔다(`https://smh86278-stack@github.com/...`) — 이 PC 엔 정지된 옛 계정 자격 증명도 남아 있어서.
 커밋 전 `python -m unittest discover tests` 가 통과해야 한다. 커밋 메시지는 한국어.
 
-**릴리스**(exe 배포, 사용자가 "릴리스 올려 줘" 하면): 커밋 → 본문을 파일로 쓰고 `<Pillow·PyInstaller 있는 python> release.py vX.Y.Z notes.md` — 빌드 → 태그 push → GitHub API 릴리스 + `dist\PostKit.exe` 첨부까지 한 번에(2026-10-23). 손으로 할 때 순서도 같다.
+**릴리스**(exe 배포, 사용자가 "릴리스 올려 줘" 하면): 커밋 → 본문을 파일로 쓰고 `<Pillow·PyInstaller 있는 python> release.py vX.Y.Z notes.md` — 빌드 → 태그 push → GitHub API 릴리스 + `dist\DungiLog.exe` 첨부까지 한 번에(2026-10-23). 손으로 할 때 순서도 같다.
 `gh` 가 없으면 토큰은 `git credential fill`(GCM)에서 꺼내 curl 에 바로 넘기고 **화면·파일에 남기지 않는다**. 릴리스 본문 JSON 은 명령줄로 넘기면 한글이 깨지니 파일로(`--data-binary @file`).
 지금까지: v0.1.0(48af3fc) · v0.2.0(691e3e1) · v0.3.0(2026-10-23, AI 고르기 8b4ba06 — 빌드는 Pillow·PyInstaller 가 있는 `C:\swbins2\tools\macro-hub\.venv\Scripts\python.exe -X utf8 build.py`) · v0.4.0(2026-10-23, 새 디자인 6c8086f — release.py 로 처음 올림) · v0.4.1(2026-10-26, 사진 개수·복사 + 글쓰기 창·참고 글 4ec8182) · v0.4.2(같은 날, 올린 뒤 검수·일정·달력 .ics) · v0.4.3(같은 날, 썸네일·카드뉴스 83cf240) · v0.4.4(같은 날, 세금용 엑셀·떼인 세금 e1985e9).

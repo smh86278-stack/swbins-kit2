@@ -69,16 +69,16 @@ jobs:
       - name: Smoke (built app, macOS)
         if: runner.os == 'macOS'
         run: |
-          test -d dist/PostKit.app && test -f dist/PostKit-mac.zip
-          codesign --verify --deep --strict dist/PostKit.app
-          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" dist/PostKit.app/Contents/Info.plist
-          file dist/PostKit.app/Contents/MacOS/PostKit
-          python tests/smoke.py --os mac --shot shot-app.png -- dist/PostKit.app/Contents/MacOS/PostKit --no-window
+          test -d dist/DungiLog.app && test -f dist/DungiLog-mac.zip
+          codesign --verify --deep --strict dist/DungiLog.app
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" dist/DungiLog.app/Contents/Info.plist
+          file dist/DungiLog.app/Contents/MacOS/DungiLog
+          python tests/smoke.py --os mac --shot shot-app.png -- dist/DungiLog.app/Contents/MacOS/DungiLog --no-window
 
       - name: Smoke (built exe, Windows)
         if: runner.os == 'Windows'
         shell: bash
-        run: python tests/smoke.py --os win --shot shot-app.png -- dist/PostKit.exe --no-window
+        run: python tests/smoke.py --os win --shot shot-app.png -- dist/DungiLog.exe --no-window
 
       - name: Upload screenshots
         if: always()
@@ -89,10 +89,10 @@ jobs:
           if-no-files-found: ignore
 
       # 맥 .app 은 서명·공증 없이 시험용으로만 올려 둔다(릴리스는 release.py 로 따로)
-      - name: Upload PostKit-mac.zip
+      - name: Upload DungiLog-mac.zip
         if: runner.os == 'macOS'
         uses: actions/upload-artifact@v4
         with:
-          name: PostKit-mac
-          path: dist/PostKit-mac.zip
+          name: DungiLog-mac
+          path: dist/DungiLog-mac.zip
           retention-days: 14

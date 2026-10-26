@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""GitHub 릴리스 올리기 — 커밋해 둔 상태에서 exe 를 빌드하고 태그·릴리스·PostKit.exe 첨부까지.
+"""GitHub 릴리스 올리기 — 커밋해 둔 상태에서 exe 를 빌드하고 태그·릴리스·DungiLog.exe 첨부까지.
 
     python release.py v0.3.1 notes.md          (notes.md = 릴리스 본문, 한국어 그대로)
-    python release.py v0.3.1 notes.md --no-build   (dist\\PostKit.exe 를 그대로 올림)
+    python release.py v0.3.1 notes.md --no-build   (dist\\DungiLog.exe 를 그대로 올림)
 
 - 이 파이썬으로 build.py 를 돌린다 → Pillow·PyInstaller 가 있는 파이썬으로 실행할 것.
 - 토큰은 `git credential fill`(GCM)에서 꺼내 이 프로세스 안에서만 쓴다 — 화면·파일에 남기지 않는다.
@@ -17,7 +17,7 @@ import urllib.error
 import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-EXE = os.path.join(HERE, "dist", "PostKit.exe")
+EXE = os.path.join(HERE, "dist", "DungiLog.exe")
 OWNER = "smh86278-stack"
 
 
@@ -74,7 +74,7 @@ def main(argv):
               json.dumps({"tag_name": tag, "name": tag, "body": body}, ensure_ascii=False).encode("utf-8"),
               "application/json; charset=utf-8")
     with open(EXE, "rb") as f:
-        asset = api(rel["upload_url"].split("{")[0] + "?name=PostKit.exe", tok, f.read(), "application/octet-stream")
+        asset = api(rel["upload_url"].split("{")[0] + "?name=DungiLog.exe", tok, f.read(), "application/octet-stream")
     print("릴리스:", rel["html_url"])
     print("첨부:", asset["name"], asset["size"], asset["state"])
 

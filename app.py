@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""글 도우미(PostKit) — 사진·메모를 넣으면 플랫폼별 글을 내 말투로 써 주는 앱.
+"""둥이로그(DungiLog, 예전 이름 글 도우미·PostKit) — 사진·메모를 넣으면 플랫폼별 글을 내 말투로 써 주는 앱.
 
     python app.py      (exe 는 build.py)
 
@@ -38,7 +38,7 @@ import refs
 import store
 import taxbook
 
-APP = "PostKit"
+APP = "PostKit"         # 데이터 폴더·이미 켜져 있나 확인에 쓰는 속 이름 — 보이는 이름이 둥이로그로 바뀌어도 그대로(기존 데이터가 이어지게)
 PORT = 8650
 IS_WIN = sys.platform == "win32"
 IS_MAC = sys.platform == "darwin"
@@ -63,7 +63,7 @@ def set_data(path):
 
 set_data(store.load_location(HOME) or HOME)
 TOKEN = secrets.token_urlsafe(24)
-FROZEN = bool(getattr(sys, "frozen", False))      # PostKit.exe 로 돌고 있나
+FROZEN = bool(getattr(sys, "frozen", False))      # DungiLog.exe 로 돌고 있나
 NAME_RE = re.compile(r"^[^\\/:*?\"<>|\x00-\x1f]{1,120}$")
 
 JOBS = {}                      # job id → {platform id: {status, text, error}}
@@ -316,16 +316,17 @@ def open_folder(path):
 
 
 def make_shortcuts():
-    """시작 메뉴·바탕 화면에 '글 도우미' 바로가기(지금 exe 를 가리킨다). 만든 곳 목록, 실패면 [].
-    맥은 만들지 않는다 — PostKit.app 을 응용 프로그램 폴더로 옮겨 Dock 에 두면 된다(도움말에 안내)."""
+    """시작 메뉴·바탕 화면에 '둥이로그' 바로가기(지금 exe 를 가리킨다). 만든 곳 목록, 실패면 [].
+    맥은 만들지 않는다 — DungiLog.app 을 응용 프로그램 폴더로 옮겨 Dock 에 두면 된다(도움말에 안내)."""
     if not IS_WIN:
         return []
     exe = sys.executable
     ps = ("$s = New-Object -ComObject WScript.Shell; $made = @(); "
           "foreach ($dir in @([Environment]::GetFolderPath('Programs'), [Environment]::GetFolderPath('Desktop'))) { "
-          "  $l = $s.CreateShortcut((Join-Path $dir '글 도우미.lnk')); $l.TargetPath = $env:PK_EXE; "
+          "  Remove-Item -LiteralPath (Join-Path $dir '글 도우미.lnk') -ErrorAction SilentlyContinue; "     # 예전 이름 바로가기는 치운다
+          "  $l = $s.CreateShortcut((Join-Path $dir '둥이로그.lnk')); $l.TargetPath = $env:PK_EXE; "
           "  $l.WorkingDirectory = Split-Path $env:PK_EXE; $l.IconLocation = $env:PK_EXE + ',0'; "
-          "  $l.Description = '사진·메모로 블로그·인스타 글 쓰기'; $l.Save(); $made += $dir }; $made -join '|'")
+          "  $l.Description = '쌍둥이 육아·체험단 글을 내 말투로'; $l.Save(); $made += $dir }; $made -join '|'")
     try:
         p = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps],
                            capture_output=True, timeout=30, env=dict(os.environ, PK_EXE=exe),
@@ -376,7 +377,7 @@ def daily_backup():
 def pick_folder():
     """폴더 고르기 창(PC 화면에 뜬다 — 윈도우 FolderBrowserDialog, 맥 osascript choose folder). 고른 경로, 취소면 ''."""
     if IS_MAC:
-        script = ('POSIX path of (choose folder with prompt "글 도우미 데이터를 둘 폴더를 고르세요 '
+        script = ('POSIX path of (choose folder with prompt "둥이로그 데이터를 둘 폴더를 고르세요 '
                   '(iCloud Drive·OneDrive·구글 드라이브 폴더 추천)" default location (path to home folder))')
         try:
             p = subprocess.run(["osascript", "-e", script], capture_output=True, timeout=600)
@@ -387,7 +388,7 @@ def pick_folder():
         return ""
     ps = ("Add-Type -AssemblyName System.Windows.Forms; [Console]::OutputEncoding = [Text.Encoding]::UTF8; "
           "$o = New-Object System.Windows.Forms.Form -Property @{TopMost = $true}; "
-          "$d = New-Object System.Windows.Forms.FolderBrowserDialog; $d.Description = '글 도우미 데이터를 둘 폴더를 고르세요 (OneDrive·구글 드라이브 폴더 추천)'; "
+          "$d = New-Object System.Windows.Forms.FolderBrowserDialog; $d.Description = '둥이로그 데이터를 둘 폴더를 고르세요 (OneDrive·구글 드라이브 폴더 추천)'; "
           "$d.ShowNewFolderButton = $true; if ($d.ShowDialog($o) -eq 'OK') { $d.SelectedPath }")
     try:
         p = subprocess.run(["powershell", "-NoProfile", "-STA", "-ExecutionPolicy", "Bypass", "-Command", ps],
@@ -585,7 +586,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header("Content-Type", "text/calendar; charset=utf-8")
                 self.send_header("Content-Length", str(len(body)))
-                self.send_header("Content-Disposition", 'attachment; filename="postkit-%s.ics"' % datetime.now().strftime("%Y%m%d"))
+                self.send_header("Content-Disposition", 'attachment; filename="dungilog-%s.ics"' % datetime.now().strftime("%Y%m%d"))
                 self.send_header("Cache-Control", "no-store")
                 self.end_headers()
                 self.wfile.write(body)
@@ -593,7 +594,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if u.path == "/api/backup.zip":                 # 백업 파일 받기 — 브라우저가 내려받기로 저장
                 os.makedirs(BACKUPS, exist_ok=True)
                 photos = q.get("photos") == "1"
-                name = "PostKit-backup-%s%s.zip" % (datetime.now().strftime("%Y%m%d-%H%M"), "" if photos else "-nophoto")
+                name = "DungiLog-backup-%s%s.zip" % (datetime.now().strftime("%Y%m%d-%H%M"), "" if photos else "-nophoto")
                 path = os.path.join(BACKUPS, "download.zip")
                 store.make_zip(DATA, path, photos=photos)
                 size = os.path.getsize(path)
@@ -794,9 +795,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 return self.send(200, phone_status())
             if u.path == "/api/shortcuts":
                 if not IS_WIN:
-                    raise ValueError("맥에서는 PostKit.app 을 응용 프로그램 폴더로 옮기고 Dock 에 두세요.")
+                    raise ValueError("맥에서는 DungiLog.app 을 응용 프로그램 폴더로 옮기고 Dock 에 두세요.")
                 if not FROZEN:
-                    raise ValueError("바로가기는 PostKit.exe 로 실행했을 때만 만들 수 있어요.")
+                    raise ValueError("바로가기는 DungiLog.exe 로 실행했을 때만 만들 수 있어요.")
                 made = make_shortcuts()
                 if not made:
                     raise ValueError("바로가기를 만들지 못했어요 — app.log 를 보세요.")
@@ -838,14 +839,14 @@ PHONE = {"srv": None, "ip": "", "port": 8653, "pin": "", "sessions": set(), "fai
 PHONE_ONLY_PC = {"/api/phone", "/api/phone/qr.svg", "/api/shortcuts", "/api/data", "/api/data/pick", "/api/data/move",
                  "/api/backup.zip", "/api/backups", "/api/restore"}
 LOGIN_HTML = """<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>글 도우미</title><link rel="icon" href="/icon.png"><link rel="apple-touch-icon" href="/icon.png"><style>
+<title>둥이로그</title><link rel="icon" href="/icon.png"><link rel="apple-touch-icon" href="/icon.png"><style>
 body{margin:0;min-height:100vh;display:grid;place-items:center;font:16px/1.5 -apple-system,"Apple SD Gothic Neo","Segoe UI","Malgun Gothic",sans-serif;color:#18181b;background:#f7f7f8}
 .b{background:#fff;border:1px solid #e4e4e7;border-radius:8px;padding:28px 24px;width:min(320px,88vw);text-align:center;box-shadow:0 1px 2px rgba(0,0,0,.04)}
 img{width:48px;height:48px;border-radius:10px}h1{font-size:19px;margin:10px 0 4px}p{color:#52525b;font-size:13px;margin:0 0 16px}
 input{width:100%;box-sizing:border-box;font-size:28px;letter-spacing:10px;text-align:center;padding:10px;border:1px solid #d4d4d8;border-radius:6px;outline:none}
 input:focus{border-color:#1d4ed8;box-shadow:0 0 0 3px rgba(29,78,216,.18)}button{margin-top:14px;width:100%;padding:12px;border:0;border-radius:6px;font-size:16px;font-weight:600;color:#fff;
 background:#1d4ed8}#e{color:#b91c1c;font-size:13px;min-height:20px;margin-top:10px}</style></head><body>
-<form class="b" id="f"><img src="/icon.png" alt=""><h1>글 도우미</h1><p>PC 화면에 보이는 6자리 PIN 을 넣으세요</p>
+<form class="b" id="f"><img src="/icon.png" alt=""><h1>둥이로그</h1><p>PC 화면에 보이는 6자리 PIN 을 넣으세요</p>
 <input id="p" inputmode="numeric" autocomplete="one-time-code" maxlength="6" autofocus><button>들어가기</button><div id="e"></div></form>
 <script>document.getElementById("f").onsubmit=async e=>{e.preventDefault();
 const r=await fetch("/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:document.getElementById("p").value})});

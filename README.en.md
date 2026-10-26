@@ -1,8 +1,10 @@
-# PostKit — a writing desk app for sponsored-review and parenting bloggers
+# DungiLog (둥이로그) — a writing desk app for twin parents who blog
+
+> Formerly *PostKit*. The data folder keeps the old name (`PostKit`).
 
 [![test](https://github.com/smh86278-stack/swbins-kit2/actions/workflows/test.yml/badge.svg)](https://github.com/smh86278-stack/swbins-kit2/actions/workflows/test.yml)
 
-**Drop in a few photos and a short memo; PostKit drafts posts for Naver Blog, Naver Cafe, Instagram and TikTok in *your* voice, and keeps track of campaign requirements, deadlines and income.** Posting stays manual by design. — [한국어](README.md)
+**Drop in a few photos and a short memo; DungiLog drafts posts for Naver Blog, Naver Cafe, Instagram and TikTok in *your* voice, and keeps track of campaign requirements, deadlines and income.** Posting stays manual by design. — [한국어](README.md)
 
 ![Write screen](docs/images/ui-write-basic.png)
 
@@ -17,7 +19,7 @@
 
 ## Architecture in one paragraph
 
-A single `PostKit.exe` on Windows or `PostKit.app` on macOS (PyInstaller) starts a standard-library `http.server` on `127.0.0.1` and opens Edge (Chrome/Edge/Brave on macOS, falling back to the default browser) in app mode. `ui.html` is one vanilla-JS page with no CDN. `gen.py` builds prompts and post-processes results, `ai.py` drives whichever CLI the user is already logged into (Claude Code, Codex, Gemini CLI) or a local Ollama, and `store.py` keeps everything as plain files in a data folder that can live in OneDrive. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (Korean).
+A single `DungiLog.exe` on Windows or `DungiLog.app` on macOS (PyInstaller) starts a standard-library `http.server` on `127.0.0.1` and opens Edge (Chrome/Edge/Brave on macOS, falling back to the default browser) in app mode. `ui.html` is one vanilla-JS page with no CDN. `gen.py` builds prompts and post-processes results, `ai.py` drives whichever CLI the user is already logged into (Claude Code, Codex, Gemini CLI) or a local Ollama, and `store.py` keeps everything as plain files in a data folder that can live in OneDrive. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (Korean).
 
 ## Security highlights (all in code)
 

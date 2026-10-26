@@ -1,17 +1,17 @@
 # 아키텍처
 
-글 도우미(PostKit)의 구성 요소, 데이터 흐름, 설계 결정(왜 그렇게 했나), 보안 경계, 시험 전략을 실제 코드 기준으로 정리한다.
+둥이로그(DungiLog, 예전 글 도우미·PostKit)의 구성 요소, 데이터 흐름, 설계 결정(왜 그렇게 했나), 보안 경계, 시험 전략을 실제 코드 기준으로 정리한다.
 첫 소개는 [`../README.md`](../README.md).
 
 ## 1. 한눈에
 
 - **대상**: Windows PC 또는 Mac 한 대, 사용자 한 명(블로거). 서버·클라우드·회원 가입 없이 그 PC 안에서 끝난다. AI 는 사용자가 이미 로그인해 둔 CLI 를 빌려 쓴다.
-- **형태**: 윈도우 `PostKit.exe` 하나 · 맥 `PostKit.app`(PyInstaller). 실행하면 로컬 HTTP 서버를 띄우고 Edge(맥은 Chrome·Edge·Brave)를 앱 모드(`--app`, 전용 프로필)로 열어 창처럼 보인다. 플랫폼별 차이는 8절.
+- **형태**: 윈도우 `DungiLog.exe` 하나 · 맥 `DungiLog.app`(PyInstaller). 실행하면 로컬 HTTP 서버를 띄우고 Edge(맥은 Chrome·Edge·Brave)를 앱 모드(`--app`, 전용 프로필)로 열어 창처럼 보인다. 플랫폼별 차이는 8절.
 - **언어·의존성**: 서버는 **파이썬 표준 라이브러리만**(`http.server`·`socketserver`·`subprocess`·`zipfile`). 사진 손질에만 Pillow. 화면은 외부 CDN 없는 `ui.html` 한 장(바닐라 JS).
 - **규모**: 파이썬 약 2,200줄(app 924 · gen 435 · qr 266 · ai 251 · store 215), 화면 1,500줄, 시험 5개 파일 49개.
 
 ```
-PostKit.exe ── app.main() ── ThreadingHTTPServer 127.0.0.1:8650 ──┬─ GET  /            ui.html (토큰 심어서)
+DungiLog.exe ── app.main() ── ThreadingHTTPServer 127.0.0.1:8650 ──┬─ GET  /            ui.html (토큰 심어서)
      │                                                           ├─ POST /api/gen      → 플랫폼마다 스레드 → ai.run → <플랫폼>.md
      └─ msedge --app=http://127.0.0.1:8650/                       ├─ GET  /api/job      ← 화면이 2초마다 폴링
                                                                  ├─ POST /api/refine   → ai.run(세션 이어받기) 
@@ -98,7 +98,7 @@ PostKit.exe ── app.main() ── ThreadingHTTPServer 127.0.0.1:8650 ──�
   - `test_store` — OS 별 기본 데이터 자리·맥 클라우드 폴더·데이터 폴더 옮기기·백업·되살리기·성장 기록 / `test_qr` — QR 인코딩 / `test_release` — 릴리스 스크립트 인자·본문
 - CI: GitHub Actions `windows-latest`·`macos-latest` × 파이썬 3.10·3.12, Pillow 를 깔고 같은 명령.
   이어서 두 OS 에서 `build.py` 로 exe·.app 을 만들고, 소스와 빌드한 앱을 각각 창 없이 띄워 `tests/smoke.py` 가 `/api/state`·첫 화면·아이콘을 부르고
-  Playwright(크로미엄)로 첫 화면을 찍는다(스크린샷·`PostKit-mac.zip` 은 아티팩트).
+  Playwright(크로미엄)로 첫 화면을 찍는다(스크린샷·`DungiLog-mac.zip` 은 아티팩트).
 - 화면은 시험 데이터 폴더(`POSTKIT_DATA`)로 띄워 Playwright(msedge)로 세 테마 × 주요 탭 + 390px 폭을 찍어 콘솔 오류·가로 넘침을 본다(수동 절차).
 
 ## 8. 플랫폼(윈도우 · 맥)
@@ -115,11 +115,11 @@ PostKit.exe ── app.main() ── ThreadingHTTPServer 127.0.0.1:8650 ──�
 | AI CLI 찾기 | PATH(+`~/.local/bin`·`%APPDATA%\npm`), `.cmd` 는 `cmd.exe` 를 거쳐 띄움 | Finder 로 켠 앱은 PATH 가 `/usr/bin:/bin` 뿐 → 로그인 셸 PATH(`$SHELL -lc`, 5초 제한·한 번만) + `/opt/homebrew/bin`·`/usr/local/bin`·`~/.local/bin`·`~/.npm-global/bin`·nvm·volta·bun. 띄울 때도 넓힌 PATH 를 넘긴다(npm CLI 는 `env node`) | `gen.search_path`·`which`·`cli_env` |
 | CLI 멈추기(시간 초과) | `taskkill /T`(cmd → node 까지) | 새 세션으로 띄워 `killpg` | `ai._run_cli` |
 | 한글 파일 이름 | — | 사진 이름·글 폴더 이름을 NFC 로(맥은 자모를 푼 NFD 로 넘기기도 함) | `gen.nfc` |
-| 빌드 | `--onefile --noconsole` → `PostKit.exe` | `--windowed --onedir` → `PostKit.app`, `app.ico` → icns(Pillow), Info.plist `LSUIElement`(Dock 아이콘 없음) 후 임시 서명(`codesign -s -`), `ditto` 로 zip | `build.py` |
+| 빌드 | `--onefile --noconsole` → `DungiLog.exe` | `--windowed --onedir` → `DungiLog.app`, `app.ico` → icns(Pillow), Info.plist `LSUIElement`(Dock 아이콘 없음) 후 임시 서명(`codesign -s -`), `ditto` 로 zip | `build.py` |
 
 맥의 한계(2026-10-23 기준):
 - 서명·공증 없음 → 처음 한 번 「열기」 허용(README). Apple Silicon 에서 빌드하므로 **arm64 전용**(인텔 맥은 소스로 실행).
 - 창을 닫은 뒤 45초 안에 다시 켜면 macOS 가 아직 도는 앱을 새로 띄우지 않아 창이 안 뜬다(윈도우는 두 번째 실행이 창만 하나 더 연다). 잠시 뒤 다시 켜면 된다.
 - 기본 브라우저 탭으로 열리는 경우(크로미엄 브라우저가 없을 때) 탭을 닫아야 서버가 끝난다.
-- 릴리스(`release.py`)는 아직 윈도우 exe 만 올린다. 맥 zip 을 같이 올리려면 맥에서 빌드한 `dist/PostKit-mac.zip` 이 필요하니,
+- 릴리스(`release.py`)는 아직 윈도우 exe 만 올린다. 맥 zip 을 같이 올리려면 맥에서 빌드한 `dist/DungiLog-mac.zip` 이 필요하니,
   CI(맥) 아티팩트를 받아 같은 릴리스에 두 번째 첨부로 올리는 단계(`--mac-zip <파일>` 같은 인자)를 더하는 방식이 맞다.

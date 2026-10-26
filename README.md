@@ -1,4 +1,6 @@
-# 글 도우미 (PostKit)
+# 둥이로그 (DungiLog)
+
+> 쌍둥이 엄마·아빠가 쓰려고 만든 글쓰기 앱 — 육아 일상과 체험단·협찬 글을 내 말투로. 예전 이름 「글 도우미(PostKit)」, 데이터 폴더 이름은 그대로 `PostKit`.
 
 [![test](https://github.com/smh86278-stack/swbins-kit2/actions/workflows/test.yml/badge.svg)](https://github.com/smh86278-stack/swbins-kit2/actions/workflows/test.yml)
 ![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-blue)
@@ -47,16 +49,16 @@
 
 1. 글을 써 줄 AI 하나를 이 PC 에서 로그인해 둔다 — 기본은 [Claude Code](https://claude.com/claude-code)(`claude` 를 한 번 실행해 로그인).
    **설정 → AI 고르기**에서 Codex(ChatGPT) · Gemini CLI · 로컬 Ollama 로 바꿀 수 있다(아래 표).
-2. [Releases](https://github.com/smh86278-stack/swbins-kit2/releases) 에서 `PostKit.exe` 를 받아 실행한다. 설치 과정 없이 앱 창(Edge 앱 모드)이 뜨고,
+2. [Releases](https://github.com/smh86278-stack/swbins-kit2/releases) 에서 `DungiLog.exe` 를 받아 실행한다. 설치 과정 없이 앱 창(Edge 앱 모드)이 뜨고,
    처음 한 번 바탕 화면·시작 메뉴 바로가기를 만든다. 창을 닫으면 잠시 뒤 스스로 끝난다.
 
 ### 맥에서
 
-1. `PostKit-mac.zip` 을 받아 풀고 `PostKit.app` 을 **응용 프로그램** 폴더로 옮긴다(지금은 GitHub Actions 의 `PostKit-mac` 아티팩트 — 릴리스에는 아직 없다).
+1. `DungiLog-mac.zip` 을 받아 풀고 `DungiLog.app` 을 **응용 프로그램** 폴더로 옮긴다(지금은 GitHub Actions 의 `DungiLog-mac` 아티팩트 — 릴리스에는 아직 없다).
 2. **처음 한 번만** — 서명·공증을 하지 않은 앱이라 macOS 가 막는다.
-   - macOS 14 이하: `PostKit.app` 을 **우클릭(Control+클릭) → 열기 → 열기**.
+   - macOS 14 이하: `DungiLog.app` 을 **우클릭(Control+클릭) → 열기 → 열기**.
    - macOS 15 이상: 한 번 더블클릭해 막힌 뒤 **시스템 설정 → 개인정보 보호 및 보안** 맨 아래 「그래도 열기」 → 암호.
-   - 그래도 안 되면 터미널에서 `xattr -dr com.apple.quarantine /Applications/PostKit.app`.
+   - 그래도 안 되면 터미널에서 `xattr -dr com.apple.quarantine /Applications/DungiLog.app`.
 3. 앱 창이 뜬다(Dock 에는 아이콘이 없다 — 뒤에서 서버만 돈다). 창을 닫으면 1분쯤 뒤 스스로 끝나고, 그 사이 다시 켜면 아무 일도 없을 수 있으니 잠시 뒤 다시 켠다.
 4. AI CLI 는 터미널에서 설치·로그인한다 — 예: [Homebrew](https://brew.sh) → `brew install node` → `npm install -g @anthropic-ai/claude-code` → `claude`.
    Finder 로 켠 앱은 PATH 가 짧지만, 앱이 로그인 셸 PATH 와 `/opt/homebrew/bin`·`/usr/local/bin`·`~/.local/bin`·`~/.npm-global/bin`·nvm 폴더까지 찾아본다.
@@ -145,7 +147,7 @@ python -m unittest discover tests     49개 — 플랫폼별 데이터 자리·�
 ```
 set POSTKIT_DATA=%TEMP%\postkit-test
 python -X utf8 -c "import app; app.PORT=8651; app.main()" --no-window
-python build.py                       윈도우 dist\PostKit.exe (한 파일) · 맥 dist/PostKit.app + PostKit-mac.zip
+python build.py                       윈도우 dist\DungiLog.exe (한 파일) · 맥 dist/DungiLog.app + DungiLog-mac.zip
 ```
 
 ## 라이선스

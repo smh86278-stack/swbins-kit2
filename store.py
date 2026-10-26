@@ -178,7 +178,7 @@ def check_zip(zf):
     """되살릴 zip 이 우리 백업인지, 이상한 경로(절대 경로·..)가 없는지. 넣을 이름 목록."""
     names = zf.namelist()
     if "postkit-backup.json" not in names:
-        raise ValueError("글 도우미 백업 파일이 아니에요.")
+        raise ValueError("둥이로그(글 도우미) 백업 파일이 아니에요.")
     out = []
     for n in names:
         if n == "postkit-backup.json" or n.endswith("/"):

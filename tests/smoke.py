@@ -3,7 +3,7 @@
 
     python tests/smoke.py [--shot 파일.png] [--os mac|win] -- <띄울 명령…>
     예) python tests/smoke.py --shot shot.png -- python app.py --no-window
-        python tests/smoke.py -- dist/PostKit.app/Contents/MacOS/PostKit --no-window
+        python tests/smoke.py -- dist/DungiLog.app/Contents/MacOS/DungiLog --no-window
 
 - 데이터는 임시 폴더(POSTKIT_DATA)로 — 실제 데이터를 건드리지 않는다. 포트는 앱 기본 8650.
 - --shot 이면 Playwright(크로미엄)로 첫 화면을 찍는다(pip install playwright && python -m playwright install chromium).
@@ -85,7 +85,7 @@ def main(argv):
     want_os = opts[opts.index("--os") + 1] if "--os" in opts else ""
     try:
         get("/api/state", timeout=1)
-        raise SystemExit("8650 에 이미 글 도우미가 떠 있습니다 — 끄고 다시 하세요(실제 데이터를 건드리지 않게)")
+        raise SystemExit("8650 에 이미 둥이로그가 떠 있습니다 — 끄고 다시 하세요(실제 데이터를 건드리지 않게)")
     except OSError:
         pass
     data = tempfile.mkdtemp(prefix="postkit-smoke-")
@@ -100,7 +100,7 @@ def main(argv):
         if want_os:
             assert st.get("os") == want_os, st.get("os")
         code, html = get("/")
-        assert code == 200 and "글 도우미".encode("utf-8") in html and b"__TOKEN__" not in html, "첫 화면이 이상합니다"
+        assert code == 200 and "둥이로그".encode("utf-8") in html and b"__TOKEN__" not in html, "첫 화면이 이상합니다"
         assert get("/icon.png")[0] == 200
         assert get("/api/ai")[0] == 200
         assert get("/api/data")[0] == 200

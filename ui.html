@@ -429,7 +429,7 @@ body:not(.os-win) .win-only, body:not(.os-mac) .mac-only { display: none !import
     <div class="box" id="cardKit" hidden style="margin-top:14px">
       <div class="row between"><h3>🖼 썸네일 · 카드뉴스</h3><span class="hint">올린 사진 위에 글자를 얹어 만들어요</span></div>
       <div class="row" style="flex-wrap:wrap;gap:8px;margin:8px 0">
-        <select id="ckKind"><option value="thumb">블로그 썸네일 (1:1)</option><option value="cards">인스타 카드뉴스 (4:5)</option><option value="twins">둥이 비교 카드 (1:1)</option></select>
+        <select id="ckKind"><option value="thumb">블로그 썸네일 (1:1)</option><option value="cards">인스타 카드뉴스 (4:5)</option><option value="twins">둥이 비교 카드 (1:1)</option><option value="banner">협찬 표기 배너 (가로)</option></select>
         <select id="ckStyle"><option value="band">아래 띠</option><option value="center">가운데 큰 글씨</option><option value="frame">흰 테두리</option></select>
         <label class="hint">강조 색 <input type="color" id="ckColor" value="#ff7a59" style="vertical-align:middle"></label>
       </div>
@@ -1669,11 +1669,13 @@ $("#lCsv").onclick = () => {                               // 세금 신고 준�
 // ---------- 썸네일 · 카드뉴스 (화면 캔버스로 — 이 PC 의 한글 글꼴 그대로) ----------
 const CK = { thumb: { w: 1080, h: 1080, help: "첫 줄 = 제목, 둘째 줄 = 위에 작게 얹을 말(가게 이름·지역 등). 맨 앞에 [사진 3] 처럼 쓰면 그 사진을 배경으로" },
              cards: { w: 1080, h: 1350, help: "한 줄에 카드 한 장 — 첫 줄은 표지. 줄 맨 앞에 [사진 3] 처럼 쓰면 그 사진, 없으면 순서대로" },
-             twins: { w: 1080, h: 1080, help: "첫 줄 = 제목(개월 수 등), 둘째 줄 = 첫째, 셋째 줄 = 둘째. 줄 앞 [사진 3] 처럼 쓰면 그 사진(없으면 1·2번). 이름 뒤 · 다음은 한마디(예: 콩이 · 첫 걸음)" } };
+             twins: { w: 1080, h: 1080, help: "첫 줄 = 제목(개월 수 등), 둘째 줄 = 첫째, 셋째 줄 = 둘째. 줄 앞 [사진 3] 처럼 쓰면 그 사진(없으면 1·2번). 이름 뒤 · 다음은 한마디(예: 콩이 · 첫 걸음)" },
+             banner: { w: 1080, h: 300, help: "첫 줄 = 표기 문장(캠페인이 있으면 글에 넣는 문장 그대로), 둘째 줄 = 왼쪽 딱지(협찬·광고·공구). 사진은 안 써요 — 글 맨 위, 제목 바로 아래에 넣으세요" } };
+const KIND_TAG = { experience: "협찬", sponsor: "광고", groupbuy: "공구" };
 const kidNames = () => ((S.config.kids || {}).names || "").split(/[,·/]/).map(s => s.trim()).filter(Boolean);
 const CK_FONT = '"Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
 function ckShow() {
-  const on = !!(S.name && S.photos.length);
+  const on = !!(S.name && (S.photos.length || S.campaign));   // 캠페인 글이면 사진 없이도(배너)
   $("#cardKit").hidden = !on;
   if (on && !$("#ckLines").value.trim()) ckFill();
 }
@@ -1681,6 +1683,14 @@ function ckFill() {
   const blog = S.texts.naver_blog || S.texts.naver_cafe || "", insta = S.texts.instagram || "";
   const title = (blog && splitTitle(blog).title) || $("#title").value.trim() || ($("#memo").value.split("\n")[0] || "").slice(0, 30);
   const c = camp(S.campaign);
+  if ($("#ckKind").value === "banner") {                  // 협찬 표기 — 글에 넣는 문장과 같게(gen.disclosure)
+    $("#ckLines").value = "이 글은 업체로부터 제품을 제공받아 솔직하게 작성했습니다.\n협찬";
+    $("#ckHelp").textContent = CK.banner.help;
+    if (c) api("/api/disclosure?id=" + encodeURIComponent(c.id)).then(d => {
+      if (d.text && $("#ckKind").value === "banner") $("#ckLines").value = d.text + "\n" + (KIND_TAG[d.kind] || "협찬");
+    }).catch(() => {});
+    return;
+  }
   if ($("#ckKind").value === "twins") {                   // 둥이 비교 — 개월 수(설정의 생일) + 애칭 둘
     const [a = "첫째", b = "둘째"] = kidNames();
     $("#ckLines").value = ["오늘의 둥이", "[사진 1] " + a, "[사진 2] " + b].join("\n");
@@ -1788,6 +1798,29 @@ async function ckDraw(kind, style, color, text, sub, photo, idx, total) {
   }
   return cv;
 }
+// 협찬 표기 배너 — 공정위 지침: 글 앞쪽, 잘 보이게. 사진 없이 색 바탕 + 왼쪽 딱지 + 표기 문장
+function ckBanner(style, color, text, tag) {
+  const W = 1080, H = 300, cv = document.createElement("canvas");
+  cv.width = W; cv.height = H;
+  const g = cv.getContext("2d");
+  const dark = style === "band";                          // 아래 띠 = 강조 색 바탕에 흰 글씨, 가운데 = 흰 바탕 테두리, 흰 테두리 = 연한 바탕 + 왼쪽 막대
+  g.fillStyle = dark ? color : style === "center" ? "#fff" : "#f6f7fb";
+  g.fillRect(0, 0, W, H);
+  if (style === "center") { g.strokeStyle = color; g.lineWidth = 10; g.strokeRect(5, 5, W - 10, H - 10); }
+  if (style === "frame") { g.fillStyle = color; g.fillRect(0, 0, 16, H); }
+  g.font = `800 40px ${CK_FONT}`;
+  const tw = g.measureText(tag).width + 56, tx = 64, ty = (H - 76) / 2;
+  g.fillStyle = dark ? "#fff" : color;
+  g.beginPath(); g.roundRect ? g.roundRect(tx, ty, tw, 76, 38) : g.rect(tx, ty, tw, 76); g.fill();
+  g.fillStyle = dark ? color : "#fff"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(tag, tx + tw / 2, ty + 40);
+  const x = tx + tw + 40, maxW = W - x - 60;
+  let size = 44;                                           // ckText 와 같은 굵기(800)로 줄 수를 세야 가운데가 맞는다
+  g.font = `800 ${size}px ${CK_FONT}`;
+  if (ckWrap(g, text, maxW).length > 2) { size = 36; g.font = `800 ${size}px ${CK_FONT}`; }
+  const n = Math.min(3, ckWrap(g, text, maxW).length);
+  ckText(g, text, x, (H - ((n - 1) * size * 1.25 + size)) / 2 + 2, maxW, size, 3, "left", dark ? "#fff" : "#1f2430");   // 글자 덩어리를 딱지와 같은 높이 가운데로
+  return cv;
+}
 // 둥이 비교 카드 — 두 사진을 나란히, 위에 제목(개월 수), 아래에 애칭·한마디
 async function ckTwins(style, color, title, a, b) {
   const W = 1080, H = 1080, cv = document.createElement("canvas");
@@ -1831,6 +1864,18 @@ $("#ckMake").onclick = async () => {
     return { photo: m ? +m[1] : i + 1, text: m ? l.slice(m[0].length) : l, ex: !!m };
   });
   if (!rows.length) return toast("얹을 글자를 적어 주세요.");
+  if (kind === "banner") {                                  // 협찬 표기 배너 한 장(사진 없이)
+    const cv = ckBanner(style, color, rows[0].text, rows[1] ? rows[1].text : "협찬");
+    S.ck = [{ file: "banner.png", cv }];
+    const a = document.createElement("a");
+    a.href = cv.toDataURL("image/png"); a.download = "banner.png"; a.title = "눌러서 받기";
+    a.innerHTML = `<img src="${a.href}" style="width:100%;border-radius:8px;display:block"><span class="hint">banner.png — 글 맨 위(제목 아래)에 넣으세요</span>`;
+    $("#ckOut").innerHTML = ""; $("#ckOut").appendChild(a);
+    $("#ckOut").style.gridTemplateColumns = "1fr";
+    $("#ckSave").hidden = PHONE;
+    return;
+  }
+  $("#ckOut").style.gridTemplateColumns = "";
   if (kind === "twins") {                                   // 둥이 비교 카드 한 장
     if (S.photos.length < 2 && !rows.slice(1).some(r => r.ex)) return toast("사진을 두 장 이상 올려 주세요.");
     const kid = (r, n, name) => { const [nm, ...rest] = ((r && r.text) || name).split(/\s+·\s+/); return { photo: r && r.ex ? r.photo : n, name: nm, note: rest.join(" · ") }; };

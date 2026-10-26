@@ -620,6 +620,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if u.path == "/api/backups":                    # 자동 백업 목록
                 fs = sorted((f for f in os.listdir(BACKUPS) if f.endswith(".zip")), reverse=True) if os.path.isdir(BACKUPS) else []
                 return self.send(200, [{"name": f, "size": os.path.getsize(os.path.join(BACKUPS, f))} for f in fs])
+            if u.path == "/api/disclosure":                 # 협찬 표기 문장 — 글에 넣는 것과 같은 문장(배너 이미지용)
+                c = next((x for x in load_items("campaigns") if x.get("id") == q.get("id")), None)
+                return self.send(200, {"text": gen.disclosure(c) if c else "", "kind": (c or {}).get("kind", "")})
             if u.path == "/api/age":                        # 아기 개월 수(설정의 생일 기준)
                 bd = (load_cfg().get("kids") or {}).get("birthday", "")
                 return self.send(200, {"age": gen.baby_age(bd, q.get("on") or datetime.now().strftime("%Y-%m-%d"))})

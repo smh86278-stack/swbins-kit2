@@ -581,6 +581,11 @@ body:not(.os-win) .win-only, body:not(.os-mac) .mac-only { display: none !import
         <label class="hint" style="margin-left:12px"><input type="checkbox" id="cNeedMap"> 지도(장소) 필수</label></div>
       <label class="small">업체 요구사항 (그대로 AI 에게 전달돼요)</label>
       <textarea id="cNotes" rows="3" placeholder="예) 주차 정보 꼭 넣기, 사진 15장 이상, 동영상 1개"></textarea>
+      <div id="cPast" hidden style="margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--warnsoft);font-size:13px"></div>
+      <label class="small">📝 업체 메모 — 끝나고 남겨 두면, 다음에 같은 업체 캠페인을 만들 때 위에 보여 줘요</label>
+      <div class="row" id="cRev" style="gap:6px"><button type="button" class="btn" data-r="good">😊 좋았어요</button><button type="button" class="btn" data-r="ok">😐 보통</button><button type="button" class="btn" data-r="bad">😞 별로</button></div>
+      <div class="row chipsel" id="cRevTags" style="flex-wrap:wrap;gap:6px;margin-top:6px"></div>
+      <input type="text" id="cRevNote" placeholder="한 줄 메모 — 예) 담당자 답장 빠름, 주차 2시간 무료, 원고 수정 2번 요청" style="margin-top:6px">
       <div class="row" style="margin-top:12px"><button class="btn main" id="cSave">저장</button><button class="btn" id="cCancel">취소</button>
         <span class="grow"></span><button class="btn danger" id="cDel" hidden>삭제</button></div>
     </div>
@@ -1542,7 +1547,8 @@ function renderCamps() {
     const d = dday(c);
     const sub = [c.provided && "제공 " + c.provided, c.kind === "groupbuy" && c.sale_price && "가격 " + (c.price ? c.price + " → " : "") + c.sale_price,
       (c.keywords || []).filter(k => k.word).map(k => k.word + "×" + (k.min || 1)).join(" "), c.visit && "방문 " + c.visit.slice(5).replace("-", "/").replace("T", " ").replace(" 00:00", ""), c.deadline && "마감 " + c.deadline,
-      c.audit && ((n => n ? "검수 ✗ " + n + "개" : "검수 ✓")(c.audit.rows.filter(r => r.ok === false).length))].filter(Boolean).join(" · ");
+      c.audit && ((n => n ? "검수 ✗ " + n + "개" : "검수 ✓")(c.audit.rows.filter(r => r.ok === false).length)),
+      c.review_rating && "메모 " + REV_FACE[c.review_rating], pastBadge(c)].filter(Boolean).join(" · ");
     return `<div class="camp ${c.status === "done" ? "done" : ""}" data-id="${esc(c.id)}">
       <div class="dday ${d.cls}">${esc(d.t)}<small>${esc(KIND[c.kind] || "")}</small></div>
       <div class="main-c"><span class="kind ${esc(c.kind)}">${esc(KIND[c.kind] || "")}</span><b>${esc(c.brand)}</b> ${c.title ? "· " + esc(c.title) : ""}
@@ -1583,7 +1589,7 @@ async function campAct(id, act) {
       goTab("ledger");
       ledgerEdit({ date: today(), kind: c.kind === "groupbuy" ? "공구 수수료" : "협찬 물품", platform: (c.platforms || [])[0] || "",
         what: c.brand + (c.title ? " · " + c.title : "") + ((c.title || "").includes(KIND[c.kind]) ? "" : " " + (KIND[c.kind] || "")), memo: c.provided || "", campaign: c.id });
-      toast("완료했어요. 받은 것을 장부에 적어 두세요.");
+      toast("완료했어요. 받은 것을 장부에 적어 두세요 — 업체 메모는 캠페인의 「고치기」에서 남길 수 있어요.");
     }
   }
 }
@@ -1626,9 +1632,37 @@ function campEdit(c) {
   $("#cKws").innerHTML = "";
   (c.keywords && c.keywords.length ? c.keywords : [null]).forEach(kwRow);
   $("#cDel").hidden = !c.id;
+  S.rev = c.review_rating || "";
+  $("#cRevTags").innerHTML = REV_TAGS.map(t => `<label><input type="checkbox" value="${esc(t)}" ${(c.review_tags || []).includes(t) ? "checked" : ""}>${esc(t)}</label>`).join("");
+  $("#cRevNote").value = c.review_note || "";
+  revView(); showPast();
   kindView();
   $("#campForm").hidden = false;
   $("#cBrand").focus();
+}
+// 📝 업체 메모 — 캠페인마다 평가·딱지·한 줄. 같은 업체(띄어쓰기·대소문자 무시) 의 다른 캠페인 메모를 모아 보여 준다
+const REV_TAGS = ["응대 친절", "답장 빠름", "정산 빠름", "정산 늦음", "수정 요청 많음", "조건 까다로움", "제품·음식 좋음", "재협찬 연락 옴"];
+const REV_FACE = { good: "😊", ok: "😐", bad: "😞" };
+const brandKey = s => (s || "").replace(/\s/g, "").toLowerCase();
+function pastFor(brand, exceptId) {
+  const k = brandKey(brand);
+  return k ? S.camps.filter(c => c.id !== exceptId && brandKey(c.brand) === k && (c.review_rating || (c.review_tags || []).length || c.review_note || c.status === "done"))
+    .sort((a, b) => (b.deadline || b.created || "").localeCompare(a.deadline || a.created || "")) : [];
+}
+function revView() { $("#cRev").querySelectorAll("button").forEach(b => b.classList.toggle("main", b.dataset.r === S.rev)); }
+$("#cRev").querySelectorAll("button").forEach(b => b.onclick = () => { S.rev = S.rev === b.dataset.r ? "" : b.dataset.r; revView(); });
+function showPast() {
+  const past = pastFor($("#cBrand").value, S.editCamp), box = $("#cPast");
+  box.hidden = !past.length;
+  if (!past.length) return;
+  box.innerHTML = `<b>📝 이 업체와 전에 ${past.length}번 했어요</b>` + past.slice(0, 3).map(c =>
+    `<div style="margin-top:4px">${REV_FACE[c.review_rating] || "·"} ${esc((c.deadline || c.created || "").slice(0, 7))} ${esc(c.title || KIND[c.kind] || "")}` +
+    `${(c.review_tags || []).length ? " — " + esc(c.review_tags.join(" · ")) : ""}${c.review_note ? ` — <i>${esc(c.review_note)}</i>` : ""}</div>`).join("");
+}
+$("#cBrand").oninput = showPast;
+function pastBadge(c) {                                    // 목록 줄에 — 같은 업체의 지난 평가(가장 최근)
+  const p = pastFor(c.brand, c.id).find(x => x.review_rating);
+  return p ? "전에 " + REV_FACE[p.review_rating] + ((p.review_tags || []).includes("정산 늦음") ? " 정산 늦음" : "") : "";
 }
 function kindView() {
   document.querySelectorAll("#campForm .gb").forEach(e => e.hidden = $("#cKind").value !== "groupbuy");
@@ -1667,6 +1701,7 @@ $("#cSave").onclick = async () => {
     tags: $("#cTags").value.trim(), links: $("#cLinks").value.split("\n").map(s => s.trim()).filter(Boolean), notes: $("#cNotes").value.trim(),
     min_photos: Math.max(0, +$("#cMinPhotos").value || 0), need_map: $("#cNeedMap").checked,
     visit: $("#cKind").value === "groupbuy" ? "" : $("#cVisit").value,
+    review_rating: S.rev || "", review_tags: [...$("#cRevTags").querySelectorAll("input:checked")].map(i => i.value), review_note: $("#cRevNote").value.trim(),
     status: old.status || "open" });
   if (item.links.some(u => !/^https?:\/\//.test(u))) return toast("링크는 http:// 나 https:// 로 시작해야 해요.");
   try {

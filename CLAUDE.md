@@ -47,9 +47,10 @@ gen.py            프롬프트 조립·claude -p 호출·결과 파싱·사진 �
 ai.py             AI 고르기 — 엔진 목록·설치 확인·엔진별 호출(codex exec·gemini -p·Ollama /api/chat)·사진 보는 법 (테스트 대상)
 store.py          데이터 폴더 위치(location.json)·복사·백업 zip/되살리기·자동 백업·성장 기록 (테스트 대상)
 qr.py             QR(바이트·M·버전 1~10) — 외부 라이브러리 없이
-ui.html           화면 전부(바닐라 JS, 외부 CDN 없음). 색은 키트(C:\swbins-kit) 허브 web\theme.css 토큰을 :root 변수로 복사해 씀
-                  — <html data-theme> basic(기본, 흰+파랑)·navy(진한 사이드바)·dark·pastel(예전 모양), 고른 값은 localStorage "theme"(창마다)
-                  아이콘은 IC 표의 선(stroke) SVG(<svg class="i" data-i="이름"> / JS 에선 ic("이름")) — 탭·단추에 이모지를 다시 넣지 말 것
+ui.html           화면 전부(바닐라 JS, 외부 CDN 없음 — 웹 글꼴도 안 부르고 PC 글꼴만). 2026-10-26 디자인 B 「종이 노트」(키트·D&C 허브와 같은 규칙):
+                  미색 종이 바탕·먹색 글씨·벽돌색 포인트·명조 제목, 카드 대신 가로줄, 그림자·그라데이션·장식 이모지 없음
+                  — <html data-theme> paper(기본)·dark(어두운 종이) 두 가지, 옛 값(basic·navy·pastel)은 paper 로 읽음. 고른 값은 localStorage "theme"(창마다)
+                  아이콘은 IC 표의 선(stroke) SVG(<svg class="i" data-i="이름"> / JS 에선 ic("이름")) — 장식 아이콘은 CSS 로 숨겼다. 탭·단추·틀 이름에 이모지를 다시 넣지 말 것
 docs\             ARCHITECTURE.md(설계 설명) · images\ui-<탭>-<테마>.png(README 스크린샷 — 견본 데이터는 가상, 경로·이름 같은 개인 정보 없게)
 .github\workflows\test.yml   unittest: windows·macos × 파이썬 3.10·3.12 / build: 두 OS 에서 build.py → tests\smoke.py(소스·빌드한 앱을 창 없이 띄워 API·첫 화면 + Playwright 스크린샷), 맥 zip 아티팩트
 prompts\*.md      base(공통 규칙·뻔한 표현 목록) + 플랫폼별. platforms.json · templates.json

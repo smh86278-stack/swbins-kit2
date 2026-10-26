@@ -35,6 +35,15 @@ class CalTest(unittest.TestCase):
         self.assertIn("TRIGGER:-PT2H", s)
         self.assertIn("TRIGGER:PT9H", s)
         self.assertNotIn("\n\n", s.replace("\r\n", "\n"))
+        for line in s.split("\r\n"):                                     # 한 줄 75바이트 이하(접힌 줄 포함)
+            self.assertLessEqual(len(line.encode("utf-8")), 75)
+
+    def test_fold_long_korean(self):
+        ev = cal.events([{"id": "x", "brand": "아주아주긴가게이름" * 6, "deadline": "2026-11-04"}])
+        s = cal.ics(ev)
+        unfolded = s.replace("\r\n ", "")
+        self.assertIn("SUMMARY:글 마감 — " + "아주아주긴가게이름" * 6, unfolded)
+        self.assertTrue(all(len(l.encode("utf-8")) <= 75 for l in s.split("\r\n")))
 
 
 if __name__ == "__main__":

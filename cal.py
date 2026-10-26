@@ -31,6 +31,18 @@ def _esc(s):
     return s.replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\n", "\\n")
 
 
+def _fold(line):
+    """RFC 5545 — 한 줄 75바이트 넘으면 접는다(다음 줄은 공백으로 시작). 한글이 글자 중간에서 잘리지 않게 글자 단위로."""
+    out, cur = [], ""
+    for ch in line:
+        if len((cur + ch).encode("utf-8")) > (75 if not out else 74):
+            out.append(cur)
+            cur = ""
+        cur += ch
+    out.append(cur)
+    return "\r\n ".join(out)
+
+
 def _alarm(trigger, text):
     return ["BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:" + _esc(text), "TRIGGER:" + trigger, "END:VALARM"]
 
@@ -54,4 +66,4 @@ def ics(evs, now=None):
             lines += _alarm("-PT15H", "내일 " + e["title"]) + _alarm("PT9H", "오늘 " + e["title"])
         lines.append("END:VEVENT")
     lines.append("END:VCALENDAR")
-    return "\r\n".join(lines) + "\r\n"
+    return "\r\n".join(_fold(l) for l in lines) + "\r\n"

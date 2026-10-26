@@ -91,6 +91,8 @@ def read_one(url):
             text = desc
         text = text[:MAX_CHARS]
         if len(text) < 30:
+            if "instagram.com" in url:                   # 2026-10 확인: 공개 계정도 로그인 벽이라 본문·캡션이 안 온다
+                raise ValueError("인스타 글은 로그인 때문에 못 읽어요 — 참고할 캡션을 복사해 메모에 붙여 넣어 주세요")
             raise ValueError("본문을 못 읽었어요(로그인이 필요한 글일 수 있어요)")
         return {"url": url, "title": title[:120], "text": text, "error": ""}
     except Exception as e:                               # 주소 하나가 틀려도 글 만들기는 이어 간다

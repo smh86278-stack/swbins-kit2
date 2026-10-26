@@ -351,12 +351,12 @@ body:not(.os-win) .win-only, body:not(.os-mac) .mac-only { display: none !import
   nav { position: fixed; bottom: 0; left: 0; right: 0; width: auto; flex-direction: row; padding: 0 0 env(safe-area-inset-bottom);
     background: var(--bg); border-right: 0; border-top: 2px solid var(--rule); z-index: 5; gap: 0; overflow-x: auto; }
   nav .logo, nav .grow, nav .claude { display: none; }
-  nav button { flex: 1 1 0; flex-direction: column; gap: 0; font-size: 12px; padding: 12px 0 11px; text-align: center; min-width: 0; justify-content: center;
+  nav button { flex: 1 1 0; flex-direction: column; gap: 0; font-size: 12px; padding: 15px 0 9px; text-align: center; min-width: 0; justify-content: center;
     letter-spacing: -.3px; border-bottom: 0; }
   nav button + button { border-left: 1px solid var(--line); }
   nav button.on { background: var(--face); color: var(--text); }
   nav button.on::before { left: 22%; right: 22%; top: 0; bottom: auto; width: auto; height: 3px; }
-  nav .badge { position: absolute; top: 3px; right: 3px; margin: 0; }
+  nav .badge { position: absolute; top: 1px; left: 50%; transform: translateX(-50%); margin: 0; font-size: 10px; line-height: 13px; padding: 0 4px; }   /* 글자 바로 위 가운데 — 오른쪽 끝에 붙이면 좁은 폰에서 「캠페인」 글자를 덮는다 */
   .campbar { flex-wrap: wrap; }
   .campbar .hint { flex-basis: 100%; order: 5; }
   .campbar b, .kind { white-space: nowrap; }

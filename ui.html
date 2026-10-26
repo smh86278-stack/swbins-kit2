@@ -403,6 +403,10 @@ body:not(.os-win) .win-only, body:not(.os-mac) .mac-only { display: none !import
           <label class="small">참고할 글 주소 (비워도 돼요) · 비슷한 블로그·인스타 글, 한 줄에 하나 · 3개까지 — 구성만 참고하고 문장은 옮기지 않아요</label>
           <div class="row"><textarea id="refs" rows="2" placeholder="https://blog.naver.com/아이디/글번호" style="flex:1"></textarea><button class="btn" id="readRefs" title="주소의 글을 읽을 수 있는지 미리 봐요">읽어 보기</button></div>
           <div class="hint" id="refsInfo"></div>
+          <details id="kwBox" style="margin-top:10px"><summary class="small" style="cursor:pointer">🔎 키워드 추천 — 네이버에서 한 달에 몇 번 찾는지</summary>
+            <div class="row" style="margin-top:6px"><input type="text" id="kwSeed" placeholder="예) 을지로맛집, 김치찌개 (쉼표로 5개까지)" style="flex:1"><button class="btn" id="kwGo">찾기</button></div>
+            <div id="kwOut" class="hint" style="margin-top:6px"></div>
+          </details>
         </div>
         <div>
           <div class="step"><i>2</i>올릴 곳</div>
@@ -458,6 +462,17 @@ body:not(.os-win) .win-only, body:not(.os-mac) .mac-only { display: none !import
         <input type="text" id="aiModel" placeholder="비우면 기본 모델" style="flex:1;max-width:260px"><button class="btn main" id="saveAi">저장</button>
         <button class="btn" id="reAi" title="설치·로그인 뒤 다시 확인"><svg class="i" data-i="refresh"></svg>다시 확인</button></div>
       <p class="hint" id="aiHint" style="margin:6px 0 0"></p>
+    </div>
+    <div class="box pc-only">
+      <div class="step"><i><svg class="i" data-i="flag"></svg></i>키워드 추천 <span class="hint" id="kwState">네이버 검색광고 API 키(무료) — 이 PC 에만, 비밀 키는 잠가서 저장해요</span></div>
+      <ol class="hint" style="margin:6px 0 8px;padding-left:18px">
+        <li><b>searchad.naver.com</b> 에 네이버 아이디로 가입·로그인(광고를 집행하지 않아도 돼요)</li>
+        <li>위쪽 <b>도구 → API 사용 관리</b>에서 「API 서비스 신청」(화면 이름은 바뀌었을 수 있어요)</li>
+        <li>나온 <b>CUSTOMER_ID · 액세스 라이선스 · 비밀 키</b>를 아래에 붙여 넣기</li>
+      </ol>
+      <div class="row" style="flex-wrap:wrap;gap:6px"><input type="text" id="kwCustomer" placeholder="CUSTOMER_ID (숫자)" style="width:150px">
+        <input type="text" id="kwLicense" placeholder="액세스 라이선스" style="flex:1;min-width:160px"><input type="password" id="kwSecret" placeholder="비밀 키" style="flex:1;min-width:140px">
+        <button class="btn main" id="kwSave">저장</button><button class="btn" id="kwDel" hidden>지우기</button></div>
     </div>
     <div class="box">
       <div class="step"><i><svg class="i" data-i="brush"></svg></i>화면 색 <span class="hint">이 창에만 기억해요</span></div>
@@ -1776,6 +1791,43 @@ $("#ckSave").onclick = async () => {
     toast("글 폴더의 cards 에 저장했어요.");
   } catch (e) { fail(e); }
 };
+
+// ---------- 키워드 추천 (네이버 검색광고 API — keywords.py) ----------
+async function kwState() {
+  const d = await api("/api/searchad").catch(() => ({ saved: false, ok: false }));
+  $("#kwState").textContent = d.ok ? "✓ 키가 있어요 — 쓰기 탭 「🔎 키워드 추천」에서 써요" : d.saved ? "키를 이 PC 에서 풀 수 없어요(다른 PC 에서 넣은 키) — 다시 넣어 주세요" : "네이버 검색광고 API 키(무료) — 이 PC 에만, 비밀 키는 잠가서 저장해요";
+  $("#kwDel").hidden = !d.saved;
+  return d;
+}
+$("#kwSave").onclick = () => api("/api/searchad/save", { customer: $("#kwCustomer").value, license: $("#kwLicense").value, secret: $("#kwSecret").value })
+  .then(() => { $("#kwCustomer").value = $("#kwLicense").value = $("#kwSecret").value = ""; toast("저장했어요."); kwState(); }).catch(fail);
+$("#kwDel").onclick = () => confirm("키워드 추천 키를 이 PC 에서 지울까요?") && api("/api/searchad/save", { delete: true }).then(kwState).catch(fail);
+$("#kwBox").ontoggle = () => {
+  if (!$("#kwBox").open || $("#kwSeed").value.trim()) return;
+  const c = camp(S.campaign);                           // 씨앗: 캠페인 키워드 → 제목 → 메모 첫 줄
+  $("#kwSeed").value = c && (c.keywords || []).length ? c.keywords.map(k => k.word).join(", ") : ($("#title").value || $("#memo").value.split("\n")[0] || "").split(/\s+/).slice(0, 3).join(", ");
+};
+$("#kwGo").onclick = async () => {
+  const out = $("#kwOut");
+  out.textContent = "찾는 중…";
+  try {
+    const rows = await api("/api/keywords", { hints: $("#kwSeed").value });
+    if (!rows.length) return out.textContent = "나온 키워드가 없어요. 다른 낱말로 해 보세요.";
+    const good = r => r.total >= 300 && r.total <= 30000 && r.comp !== "높음";   // 너무 적지도 많지도 않고, 광고 경쟁이 높지 않은 것
+    out.innerHTML = `<table class="tbl" style="font-size:13px"><thead><tr><th></th><th>키워드</th><th class="num">월간 검색</th><th class="num">모바일</th><th>광고 경쟁</th></tr></thead><tbody>` +
+      rows.slice(0, 30).map((r, i) => `<tr><td><input type="checkbox" data-k="${esc(r.keyword)}"></td><td>${good(r) ? "👍 " : ""}${esc(r.keyword)}</td>
+        <td class="num">${r.total.toLocaleString()}</td><td class="num">${r.mobile.toLocaleString()}</td><td>${esc(r.comp)}</td></tr>`).join("") + "</tbody></table>" +
+      `<div class="row" style="margin-top:6px;gap:6px"><button class="btn" id="kwMemo">고른 것 메모에 넣기</button><span class="hint">👍 = 한 달 300~3만 번 찾고 광고 경쟁이 높지 않은 것(블로그 경쟁은 따로 봐야 해요)</span></div>`;
+    $("#kwMemo").onclick = () => {
+      const ks = [...out.querySelectorAll("input:checked")].map(i => i.dataset.k);
+      if (!ks.length) return toast("넣을 키워드를 골라 주세요.");
+      const m = $("#memo");
+      m.value = (m.value.trimEnd() ? m.value.trimEnd() + "\n" : "") + "넣을 키워드: " + ks.join(", ");
+      toast("메모에 넣었어요 — 글을 만들 때 자연스럽게 들어가요.");
+    };
+  } catch (e) { out.textContent = ""; fail(e); }
+};
+if (!PHONE) kwState();
 
 loadState().then(loadCampsQuiet).then(due => {           // 앱을 열 때 한 번 — 오늘·내일 일정이 먼저, 없으면 마감 임박
   const soon = schedule().filter(e => e.n >= 0 && e.n <= 1);

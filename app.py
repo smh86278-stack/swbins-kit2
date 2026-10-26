@@ -34,6 +34,7 @@ import ai
 import audit
 import cal
 import gen
+import keywords
 import refs
 import store
 import taxbook
@@ -559,6 +560,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
                                        "voice": [{"name": n, "text": read_text(os.path.join(VOICE, n))} for n in voice]})
             if u.path == "/api/ai":                     # ⚙️ 설정의 AI 고르기 — 엔진마다 깔렸는지·사진 보는지
                 return self.send(200, ai.status(load_cfg()))
+            if u.path == "/api/searchad":                # 키워드 추천 키가 있나(키 자체는 돌려주지 않는다)
+                saved = os.path.isfile(keywords.keys_path(LOCALDATA))
+                return self.send(200, {"saved": saved, "ok": bool(keywords.load_keys(LOCALDATA)) if saved else False})
             if u.path == "/api/job":
                 with LOCK:
                     j = JOBS.get(q.get("id", ""))
@@ -777,6 +781,17 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 if gen.inside(VOICE, p) and os.path.isfile(p):
                     os.remove(p)
                 return self.send(200, {"ok": True})
+            if u.path == "/api/searchad/save":           # 키워드 추천 키 — 이 PC 로컬에, 비밀 키는 DPAPI 로 잠가서
+                if b.get("delete"):
+                    keywords.delete_keys(LOCALDATA)
+                    return self.send(200, {"saved": False, "ok": False})
+                keywords.save_keys(LOCALDATA, b.get("customer"), b.get("license"), b.get("secret"))
+                return self.send(200, {"saved": True, "ok": True})
+            if u.path == "/api/keywords":               # 키워드 추천 — 씨앗 낱말 → 연관 키워드·월간 검색 수
+                k = keywords.load_keys(LOCALDATA)
+                if not k:
+                    raise ValueError("키워드 추천 키가 없어요 — PC 의 설정 → 키워드 추천에서 넣어 주세요.")
+                return self.send(200, keywords.related(k, keywords.hints_of(str(b.get("hints") or "")))[:60])
             if u.path == "/api/config":
                 cfg = load_cfg()
                 for k in ("voice_note", "default_platforms", "write_urls", "fixed_tags", "kids", "photo_max"):
@@ -837,7 +852,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
 PHONE = {"srv": None, "ip": "", "port": 8653, "pin": "", "sessions": set(), "fails": 0, "lock_until": 0.0}
 PHONE_ONLY_PC = {"/api/phone", "/api/phone/qr.svg", "/api/shortcuts", "/api/data", "/api/data/pick", "/api/data/move",
-                 "/api/backup.zip", "/api/backups", "/api/restore"}
+                 "/api/backup.zip", "/api/backups", "/api/restore", "/api/searchad/save"}
 LOGIN_HTML = """<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>둥이로그</title><link rel="icon" href="/icon.png"><link rel="apple-touch-icon" href="/icon.png"><style>
 body{margin:0;min-height:100vh;display:grid;place-items:center;font:16px/1.5 -apple-system,"Apple SD Gothic Neo","Segoe UI","Malgun Gothic",sans-serif;color:#18181b;background:#f7f7f8}

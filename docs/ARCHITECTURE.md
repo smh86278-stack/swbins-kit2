@@ -28,7 +28,7 @@ DungiLog.exe ── app.main() ── ThreadingHTTPServer 127.0.0.1:8650 ──�
 | AI 고르기 | `ai.py` | 엔진 목록·설치 확인·사진 보는 법(`photo_mode`: Read 도구 / `--image` 첨부 / base64 / 없음)·엔진별 호출. Ollama 는 `/api/show` capabilities 로 비전 여부를 본다 |
 | 저장소 | `store.py` | 데이터 폴더 위치(`location.json`)·옮기기(복사, 원래 자리 남김)·백업 zip/되살리기(되살리기 전 자동 백업)·하루 한 번 자동 백업 7개·성장 기록 모으기 |
 | QR | `qr.py` | 바이트 모드·오류 정정 M·버전 1~10 을 직접 구현 — 회사망에서 pip 가 막혀도 되게 |
-| 화면 | `ui.html` | 사이드바 탭 7개, 카드·표, AI 티 점검(`lint`)을 화면에서, 서식 복사(`copyRich`), 색 테마 4개(`data-theme`) |
+| 화면 | `ui.html` | 사이드바 탭 7개, 카드·표, AI 티 점검(`lint`)을 화면에서, 서식 복사(`copyRich`), 색 테마 2개 — 종이·어두운 종이(`data-theme`) |
 | 프롬프트 파일 | `prompts/*.md` · `platforms.json` · `templates.json` | 코드 수정 없이 플랫폼·메모 틀을 늘린다 |
 | 빌드 · 릴리스 | `build.py` · `release.py` · `make_icon.py` | 윈도우 한 파일 exe · 맥 .app(+zip) · 태그 → GitHub 릴리스 + exe 첨부 |
 
@@ -99,7 +99,7 @@ DungiLog.exe ── app.main() ── ThreadingHTTPServer 127.0.0.1:8650 ──�
 - CI: GitHub Actions `windows-latest`·`macos-latest` × 파이썬 3.10·3.12, Pillow 를 깔고 같은 명령.
   이어서 두 OS 에서 `build.py` 로 exe·.app 을 만들고, 소스와 빌드한 앱을 각각 창 없이 띄워 `tests/smoke.py` 가 `/api/state`·첫 화면·아이콘을 부르고
   Playwright(크로미엄)로 첫 화면을 찍는다(스크린샷·`DungiLog-mac.zip` 은 아티팩트).
-- 화면은 시험 데이터 폴더(`POSTKIT_DATA`)로 띄워 Playwright(msedge)로 세 테마 × 주요 탭 + 390px 폭을 찍어 콘솔 오류·가로 넘침을 본다(수동 절차).
+- 화면은 시험 데이터 폴더(`POSTKIT_DATA`)로 띄워 Playwright(msedge)로 두 테마 × 주요 탭 + 390px 폭을 찍어 콘솔 오류·가로 넘침을 본다(수동 절차).
 
 ## 8. 플랫폼(윈도우 · 맥)
 

@@ -6,7 +6,7 @@
 
 **Drop in a few photos and a short memo; DungiLog drafts posts for Naver Blog, Naver Cafe, Instagram and TikTok in *your* voice, and keeps track of campaign requirements, deadlines and income.** Posting stays manual by design. — [한국어](README.md)
 
-![Write screen](docs/images/ui-write-basic.png)
+![Write screen](docs/images/ui-write-paper.png)
 
 ## What it does
 

@@ -24,21 +24,21 @@
 
 ## 화면
 
-![쓰기 화면 — 메모·올릴 곳·사진, 플랫폼별 카드와 AI 티 점검](docs/images/ui-write-basic.png)
+![쓰기 화면 — 메모·올릴 곳·사진, 플랫폼별 카드와 AI 티 점검](docs/images/ui-write-paper.png)
 
 <details>
-<summary>색 테마 3종 · 캠페인 · 장부 · 설정 · 폰 화면 더 보기</summary>
+<summary>색 테마 2종(종이 · 어두운 종이) · 캠페인 · 장부 · 설정 · 폰 화면 더 보기</summary>
 
-| | 기본 | 진한 사이드바 | 다크 |
-|---|---|---|---|
-| 쓰기 | <img src="docs/images/ui-write-basic.png" width="260" alt="쓰기 · 기본"> | <img src="docs/images/ui-write-navy.png" width="260" alt="쓰기 · 진한 사이드바"> | <img src="docs/images/ui-write-dark.png" width="260" alt="쓰기 · 다크"> |
-| 캠페인 | <img src="docs/images/ui-camps-basic.png" width="260" alt="캠페인 · 기본"> | <img src="docs/images/ui-camps-navy.png" width="260" alt="캠페인 · 진한 사이드바"> | <img src="docs/images/ui-camps-dark.png" width="260" alt="캠페인 · 다크"> |
-| 장부 | <img src="docs/images/ui-ledger-basic.png" width="260" alt="장부 · 기본"> | <img src="docs/images/ui-ledger-navy.png" width="260" alt="장부 · 진한 사이드바"> | <img src="docs/images/ui-ledger-dark.png" width="260" alt="장부 · 다크"> |
-| 설정 | <img src="docs/images/ui-settings-basic.png" width="260" alt="설정 · 기본"> | <img src="docs/images/ui-settings-navy.png" width="260" alt="설정 · 진한 사이드바"> | <img src="docs/images/ui-settings-dark.png" width="260" alt="설정 · 다크"> |
+| | 종이 | 어두운 종이 |
+|---|---|---|
+| 쓰기 | <img src="docs/images/ui-write-paper.png" width="380" alt="쓰기 · 종이"> | <img src="docs/images/ui-write-dark.png" width="380" alt="쓰기 · 어두운 종이"> |
+| 캠페인 | <img src="docs/images/ui-camps-paper.png" width="380" alt="캠페인 · 종이"> | <img src="docs/images/ui-camps-dark.png" width="380" alt="캠페인 · 어두운 종이"> |
+| 장부 | <img src="docs/images/ui-ledger-paper.png" width="380" alt="장부 · 종이"> | <img src="docs/images/ui-ledger-dark.png" width="380" alt="장부 · 어두운 종이"> |
+| 설정 | <img src="docs/images/ui-settings-paper.png" width="380" alt="설정 · 종이"> | <img src="docs/images/ui-settings-dark.png" width="380" alt="설정 · 어두운 종이"> |
 
 폰 화면(390px) — 탭이 아래로 내려간다:
 
-<img src="docs/images/ui-phone-write-basic.png" width="200" alt="폰 · 쓰기"> <img src="docs/images/ui-phone-card-basic.png" width="200" alt="폰 · 결과 카드"> <img src="docs/images/ui-phone-camps-basic.png" width="200" alt="폰 · 캠페인"> <img src="docs/images/ui-phone-card-dark.png" width="200" alt="폰 · 결과 카드 다크">
+<img src="docs/images/ui-phone-write-paper.png" width="200" alt="폰 · 쓰기"> <img src="docs/images/ui-phone-card-paper.png" width="200" alt="폰 · 결과 카드"> <img src="docs/images/ui-phone-camps-paper.png" width="200" alt="폰 · 캠페인"> <img src="docs/images/ui-phone-card-dark.png" width="200" alt="폰 · 결과 카드 어두운 종이">
 
 </details>
 
@@ -94,7 +94,7 @@
 | 성장 기록 | 「개월 수」 있는 육아 글을 개월 순으로, 골라서 모은 메모 + 대표 사진으로 새 글, 달 단위로 골라 A4 앨범 PDF(자체 PDF 작성기) | `store.py` · `/api/growth` · `ui.html` `pdfFromJpegs` |
 | 데이터 | 데이터 폴더 옮기기(OneDrive·구글 드라이브) · 백업 zip/되살리기 · 하루 한 번 자동 백업(7개) | `store.py` |
 | 폰에서 쓰기 | 켤 때만 LAN 서버 · QR(자체 구현) · PIN · HttpOnly 세션 | `app.py` `PhoneHandler` · `qr.py` |
-| 화면 | 사이드바 + 카드/표, 색 테마 기본·진한 사이드바·다크(+예전 모양), 좁은 화면은 아래 탭 | `ui.html` |
+| 화면 | 사이드바 + 가로줄·표(디자인 「종이 노트」), 색 테마 종이·어두운 종이, 좁은 화면은 아래 탭 | `ui.html` |
 
 ## 구조
 

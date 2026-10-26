@@ -630,6 +630,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
         u = urllib.parse.urlparse(self.path)
         q = dict(urllib.parse.parse_qsl(u.query))
         try:
+            if u.path == "/api/card":                   # 썸네일·카드뉴스 한 장(화면 캔버스가 만든 PNG) → 글 폴더 cards\
+                d = post_path(q.get("name", ""))
+                n = os.path.basename(q.get("file", ""))
+                if not re.fullmatch(r"[\w-]{1,40}\.png", n):
+                    raise ValueError("카드 파일 이름이 올바르지 않습니다.")
+                os.makedirs(os.path.join(d, "cards"), exist_ok=True)
+                with open(os.path.join(d, "cards", n), "wb") as f:
+                    f.write(self.body_bytes())
+                return self.send(200, {"ok": True})
             if u.path == "/api/photo":                  # 사진 한 장 — 몸통이 파일 그대로
                 d = post_path(q.get("name", ""))
                 n = gen.nfc(os.path.basename(q.get("file", "")))
@@ -790,6 +799,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 if b.get("what") == "folder":
                     d = post_path(b.get("name", ""))
                     open_folder(os.path.join(d, "photos"))
+                elif b.get("what") == "cards":
+                    d = os.path.join(post_path(b.get("name", "")), "cards")
+                    os.makedirs(d, exist_ok=True)
+                    open_folder(d)
                 elif b.get("what") == "write":
                     plat = platform(b.get("platform", ""))
                     url = (plat or {}).get("write_url", "")

@@ -422,6 +422,19 @@ body:not(.os-win) .win-only, body:not(.os-mac) .mac-only { display: none !import
     </div>
     <div class="cards" id="cards"></div>
     <div class="blank" id="blank">「글 만들기」를 누르면 여기에 플랫폼별 글이 나와요.<br>「짧게」 같은 버튼이나 말로 다듬을 수 있어요.</div>
+    <div class="box" id="cardKit" hidden style="margin-top:14px">
+      <div class="row between"><h3>🖼 썸네일 · 카드뉴스</h3><span class="hint">올린 사진 위에 글자를 얹어 만들어요</span></div>
+      <div class="row" style="flex-wrap:wrap;gap:8px;margin:8px 0">
+        <select id="ckKind"><option value="thumb">블로그 썸네일 (1:1)</option><option value="cards">인스타 카드뉴스 (4:5)</option></select>
+        <select id="ckStyle"><option value="band">아래 띠</option><option value="center">가운데 큰 글씨</option><option value="frame">흰 테두리</option></select>
+        <label class="hint">강조 색 <input type="color" id="ckColor" value="#ff7a59" style="vertical-align:middle"></label>
+      </div>
+      <label class="small" id="ckHelp"></label>
+      <textarea id="ckLines" rows="4"></textarea>
+      <div class="row" style="margin-top:8px;gap:8px"><button class="btn" id="ckFill" title="지금 글의 제목·소제목으로 다시 채워요">글에서 채우기</button><button class="btn main" id="ckMake">만들기</button>
+        <button class="btn pc-only" id="ckSave" hidden>모두 저장 + 폴더 열기</button></div>
+      <div id="ckOut" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:10px"></div>
+    </div>
   </section>
 
   <section id="voice">
@@ -786,6 +799,7 @@ function renderPhotos() {
   const drop = $("#drop");
   drop.querySelectorAll(".thumb").forEach(t => t.remove());
   $("#dropEmpty").style.display = S.photos.length ? "none" : "";
+  ckShow();
   S.photos.forEach((f, i) => {
     const t = document.createElement("div");
     t.className = "thumb"; t.draggable = true;
@@ -902,6 +916,7 @@ document.addEventListener("paste", e => {
 function showBlank() {
   $("#blank").style.display = $("#cards").children.length ? "none" : "";
   $("#goNew").hidden = !Object.values(S.texts).some(Boolean);
+  ckShow();
 }
 
 $("#newPost").onclick = () => {
@@ -911,6 +926,7 @@ $("#newPost").onclick = () => {
 function newPost(campaign) {
   S.name = ""; S.photos = []; S.texts = {}; S.campaign = campaign || "";
   $("#memo").value = ""; $("#title").value = ""; $("#refs").value = ""; $("#refsInfo").textContent = ""; $("#postName").textContent = "새 글";
+  $("#ckLines").value = ""; $("#ckOut").innerHTML = ""; $("#ckSave").hidden = true;
   renderPhotos(); $("#cards").innerHTML = ""; showBlank(); renderCampBar();
 }
 
@@ -1336,6 +1352,7 @@ async function openPost(name) {
     const d = await api("/api/post?name=" + encodeURIComponent(name));
     S.name = d.name; S.photos = d.photos; S.texts = d.texts; S.campaign = d.campaign || "";
     $("#memo").value = d.memo; $("#title").value = d.title; $("#refs").value = d.refs || ""; $("#refsInfo").textContent = ""; $("#postName").textContent = d.name;
+    $("#ckLines").value = ""; $("#ckOut").innerHTML = ""; $("#ckSave").hidden = true;
     renderPhotos(); $("#cards").innerHTML = ""; renderCampBar();
     Object.keys(d.texts).forEach(p => card(p, "done"));
     showBlank();
@@ -1605,6 +1622,156 @@ $("#lCsv").onclick = () => {
   a.download = "장부-" + S.year + ".csv";
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+};
+
+// ---------- 썸네일 · 카드뉴스 (화면 캔버스로 — 이 PC 의 한글 글꼴 그대로) ----------
+const CK = { thumb: { w: 1080, h: 1080, help: "첫 줄 = 제목, 둘째 줄 = 위에 작게 얹을 말(가게 이름·지역 등). 맨 앞에 [사진 3] 처럼 쓰면 그 사진을 배경으로" },
+             cards: { w: 1080, h: 1350, help: "한 줄에 카드 한 장 — 첫 줄은 표지. 줄 맨 앞에 [사진 3] 처럼 쓰면 그 사진, 없으면 순서대로" } };
+const CK_FONT = '"Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
+function ckShow() {
+  const on = !!(S.name && S.photos.length);
+  $("#cardKit").hidden = !on;
+  if (on && !$("#ckLines").value.trim()) ckFill();
+}
+function ckFill() {
+  const blog = S.texts.naver_blog || S.texts.naver_cafe || "", insta = S.texts.instagram || "";
+  const title = (blog && splitTitle(blog).title) || $("#title").value.trim() || ($("#memo").value.split("\n")[0] || "").slice(0, 30);
+  const c = camp(S.campaign);
+  if ($("#ckKind").value === "thumb") {
+    $("#ckLines").value = [title, c ? c.brand : ""].filter(Boolean).join("\n");
+  } else {
+    // 블로그 소제목마다 한 장 — 소제목 다음에 처음 나오는 [사진 n] 을 그 카드 배경으로
+    const lines = [title], src = blog.split("\n");
+    src.forEach((l, i) => {
+      const m = l.match(/^##\s+(.+)/);
+      if (!m) return;
+      const ph = src.slice(i + 1).find(x => /^\s*\[사진\s*\d+\]\s*$/.test(x));
+      lines.push((ph ? ph.trim() + " " : "") + m[1].trim());
+    });
+    if (lines.length < 3 && insta)                       // 소제목이 없으면 인스타 글의 짧은 문장으로
+      insta.split(/(?<=[.!?…~])\s+|\n+/).map(s => s.trim()).filter(s => s.length > 6 && s.length < 40 && !s.startsWith("#")).slice(0, 4).forEach(s => lines.push(s));
+    $("#ckLines").value = lines.slice(0, 10).join("\n");
+  }
+  $("#ckHelp").textContent = CK[$("#ckKind").value].help;
+}
+function ckWrap(g, text, maxW) {                          // 낱말로 자르고, 한 낱말이 넘치면 글자로
+  const out = [];
+  let cur = "";
+  for (const w of text.split(/\s+/).filter(Boolean)) {
+    const t = cur ? cur + " " + w : w;
+    if (g.measureText(t).width <= maxW) { cur = t; continue; }
+    if (cur) out.push(cur);
+    cur = "";
+    for (const ch of w) {
+      if (g.measureText(cur + ch).width > maxW) { out.push(cur); cur = ch; } else cur += ch;
+    }
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+function ckText(g, text, x, y, maxW, size, maxLines, align = "left", color = "#fff") {
+  let lines;
+  for (; size > 28; size -= 4) {                          // 넘치면 글자를 줄인다
+    g.font = `800 ${size}px ${CK_FONT}`;
+    lines = ckWrap(g, text, maxW);
+    if (lines.length <= maxLines) break;
+  }
+  lines = lines.slice(0, maxLines);
+  g.fillStyle = color; g.textAlign = align; g.textBaseline = "top";
+  if (color === "#fff") { g.shadowColor = "rgba(0,0,0,.45)"; g.shadowBlur = 14; g.shadowOffsetY = 2; }   // 밝은 사진 위에서도 읽히게
+  lines.forEach((l, i) => g.fillText(l, x, y + i * size * 1.25));
+  g.shadowColor = "transparent";
+  return lines.length * size * 1.25;
+}
+function ckCover(g, img, x, y, w, h) {
+  const k = Math.max(w / img.naturalWidth, h / img.naturalHeight), sw = w / k, sh = h / k;
+  g.drawImage(img, (img.naturalWidth - sw) / 2, (img.naturalHeight - sh) / 2, sw, sh, x, y, w, h);
+}
+async function ckImg(n) {
+  const im = new Image();
+  im.src = `/api/photo?name=${encodeURIComponent(S.name)}&file=${encodeURIComponent(S.photos[(n - 1 + S.photos.length) % S.photos.length])}`;
+  await im.decode();
+  return im;
+}
+async function ckDraw(kind, style, color, text, sub, photo, idx, total) {
+  const { w, h } = CK[kind], cv = document.createElement("canvas");
+  cv.width = w; cv.height = h;
+  const g = cv.getContext("2d"), img = await ckImg(photo), pad = 80, big = kind === "thumb" || idx === 0;
+  if (style === "frame") {
+    g.fillStyle = "#fff"; g.fillRect(0, 0, w, h);
+    const ph = Math.round(h * 0.64);
+    ckCover(g, img, 40, 40, w - 80, ph);
+    g.fillStyle = color; g.fillRect(pad, ph + 90, 12, 120);
+    if (sub) { g.font = `700 34px ${CK_FONT}`; g.fillStyle = color; g.textAlign = "left"; g.textBaseline = "top"; g.fillText(sub, pad + 36, ph + 76); }
+    ckText(g, text, pad + 36, ph + (sub ? 128 : 96), w - pad * 2 - 36, big ? 72 : 60, 3, "left", "#1f2430");
+  } else {
+    ckCover(g, img, 0, 0, w, h);
+    if (style === "center") {
+      g.fillStyle = "rgba(0,0,0,.45)"; g.fillRect(0, 0, w, h);
+      g.font = `800 ${big ? 96 : 72}px ${CK_FONT}`;
+      const lines = ckWrap(g, text, w - pad * 2).slice(0, 4), size = big ? 96 : 72, th = lines.length * size * 1.25;
+      const y0 = (h - th) / 2;
+      if (sub) { g.font = `700 36px ${CK_FONT}`; g.fillStyle = color; g.textAlign = "center"; g.textBaseline = "bottom"; g.fillText(sub, w / 2, y0 - 24); }
+      ckText(g, text, w / 2, y0, w - pad * 2, size, 4, "center");
+      g.fillStyle = color; g.fillRect(w / 2 - 60, y0 + th + 24, 120, 10);
+    } else {                                              // band — 아래쪽 어둡게 + 글자
+      const gr = g.createLinearGradient(0, h * 0.45, 0, h);
+      gr.addColorStop(0, "rgba(0,0,0,0)"); gr.addColorStop(1, "rgba(0,0,0,.82)");
+      g.fillStyle = gr; g.fillRect(0, h * 0.45, w, h * 0.55);
+      const size = big ? 84 : 64;
+      g.font = `800 ${size}px ${CK_FONT}`;
+      const n = Math.min(3, ckWrap(g, text, w - pad * 2).length), y = h - pad - n * size * 1.25;
+      if (sub) {
+        g.font = `700 34px ${CK_FONT}`;
+        const sw = g.measureText(sub).width + 40;
+        g.fillStyle = color; g.fillRect(pad, y - 76, sw, 56);
+        g.fillStyle = "#fff"; g.textAlign = "left"; g.textBaseline = "middle"; g.fillText(sub, pad + 20, y - 47);
+      } else { g.fillStyle = color; g.fillRect(pad, y - 34, 90, 10); }
+      ckText(g, text, pad, y, w - pad * 2, size, 3);
+    }
+  }
+  if (kind === "cards" && total > 1) {                    // 카드 번호
+    g.font = `700 30px ${CK_FONT}`; g.textAlign = "right"; g.textBaseline = "top";
+    g.fillStyle = style === "frame" ? "#fff" : "rgba(255,255,255,.9)"; g.fillText(`${idx + 1} / ${total}`, w - 60, 60);
+  }
+  return cv;
+}
+$("#ckKind").onchange = () => { $("#ckLines").value = ""; ckFill(); $("#ckOut").innerHTML = ""; $("#ckSave").hidden = true; };
+$("#ckFill").onclick = ckFill;
+$("#ckMake").onclick = async () => {
+  const kind = $("#ckKind").value, style = $("#ckStyle").value, color = $("#ckColor").value;
+  const rows = $("#ckLines").value.split("\n").map(l => l.trim()).filter(Boolean).map((l, i) => {
+    const m = l.match(/^\[사진\s*(\d+)\]\s*/);
+    return { photo: m ? +m[1] : i + 1, text: m ? l.slice(m[0].length) : l };
+  });
+  if (!rows.length) return toast("얹을 글자를 적어 주세요.");
+  const items = kind === "thumb" ? [{ photo: rows[0].photo, text: rows[0].text, sub: rows[1] ? rows[1].text : "" }] : rows.map(r => ({ ...r, sub: "" }));
+  $("#ckOut").innerHTML = '<span class="hint">만드는 중…</span>';
+  try {
+    S.ck = [];
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      S.ck.push({ file: kind === "thumb" ? "thumb.png" : `card-${i + 1}.png`, cv: await ckDraw(kind, style, color, it.text, it.sub, it.photo, i, items.length) });
+    }
+    $("#ckOut").innerHTML = "";
+    S.ck.forEach(k => {
+      const a = document.createElement("a");
+      a.href = k.cv.toDataURL("image/png"); a.download = k.file; a.title = "눌러서 이 한 장 받기";
+      a.innerHTML = `<img src="${a.href}" style="width:100%;border-radius:8px;display:block"><span class="hint">${esc(k.file)}</span>`;
+      $("#ckOut").appendChild(a);
+    });
+    $("#ckSave").hidden = PHONE;
+  } catch (e) { $("#ckOut").innerHTML = ""; fail(e); }
+};
+$("#ckSave").onclick = async () => {
+  try {
+    for (const k of S.ck || []) {
+      const blob = await new Promise(r => k.cv.toBlob(r, "image/png"));
+      await api(`/api/card?name=${encodeURIComponent(S.name)}&file=${encodeURIComponent(k.file)}`, blob, true);
+    }
+    await api("/api/open", { what: "cards", name: S.name });
+    toast("글 폴더의 cards 에 저장했어요.");
+  } catch (e) { fail(e); }
 };
 
 loadState().then(loadCampsQuiet).then(due => {           // 앱을 열 때 한 번 — 오늘·내일 일정이 먼저, 없으면 마감 임박

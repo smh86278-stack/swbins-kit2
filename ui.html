@@ -572,7 +572,7 @@ body:not(.os-win) .win-only, body:not(.os-mac) .mac-only { display: none !import
 
   <section id="ledger">
     <div class="head"><div><h1>장부</h1><p>어디에 올려 무엇을 받았는지 적어 두면 종합소득세 신고 때 써요.</p></div>
-      <div class="row"><select id="lYear"></select><button class="btn" id="lCsv"><svg class="i" data-i="down"></svg>엑셀(CSV)</button><button class="btn main" id="lNew"><svg class="i" data-i="plus"></svg>기록</button></div></div>
+      <div class="row"><select id="lYear"></select><button class="btn" id="lCsv" title="요약·내역·월별·업체별 4장 — 종합소득세 신고 준비용"><svg class="i" data-i="down"></svg>세금용 엑셀</button><button class="btn main" id="lNew"><svg class="i" data-i="plus"></svg>기록</button></div></div>
     <div class="tiles" id="lTiles"></div>
     <div class="box form" id="lForm" hidden>
       <div class="fgrid">
@@ -582,6 +582,7 @@ body:not(.os-win) .win-only, body:not(.os-mac) .mac-only { display: none !import
         <label>업체·내용 *<input type="text" id="lWhat" placeholder="예) OO식당 체험단"></label>
         <label>받은 돈(원)<input type="text" id="lAmount" inputmode="numeric" placeholder="0"></label>
         <label>물품 가액(원)<input type="text" id="lValue" inputmode="numeric" placeholder="식사권·제품의 시가"></label>
+        <label>떼인 세금(원)<span class="row" style="gap:6px"><input type="text" id="lTax" inputmode="numeric" placeholder="원천징수 — 없으면 비워요" style="flex:1"><button class="btn" id="lTax33" type="button" title="받은 돈이 세금 떼기 전 금액일 때 — 3.3% 를 넣어요">3.3%</button></span></label>
       </div>
       <label class="small">글 주소</label>
       <input type="text" id="lUrl" placeholder="https://blog.naver.com/...">
@@ -1565,7 +1566,8 @@ function yearRows() { return S.ledger.filter(r => (r.date || "").startsWith(S.ye
 function renderLedger() {
   const rows = yearRows();
   const cash = rows.reduce((a, r) => a + num(r.amount), 0), goods = rows.reduce((a, r) => a + num(r.value), 0);
-  $("#lTiles").innerHTML = [["받은 돈", won(cash)], ["물품 가액", won(goods)], ["합계", won(cash + goods)], ["건수", rows.length + "건"]]
+  const tax = rows.reduce((a, r) => a + num(r.tax), 0);
+  $("#lTiles").innerHTML = [["받은 돈", won(cash)], ["물품 가액", won(goods)], ["합계", won(cash + goods)], tax ? ["떼인 세금", won(tax)] : ["건수", rows.length + "건"]]
     .map(([k, v]) => `<div class="tile"><small>${S.year}년 ${k}</small><b>${v}</b></div>`).join("");
   $("#lTable").innerHTML = rows.length ? `<thead><tr><th>날짜</th><th>종류</th><th>플랫폼</th><th>업체·내용</th><th>글</th><th class="num">받은 돈</th><th class="num">물품 가액</th></tr></thead><tbody>` +
     rows.map(r => `<tr class="click" data-id="${esc(r.id)}"><td>${esc(r.date)}</td><td>${esc(r.kind)}</td><td>${r.platform ? picon(r.platform) : ""}</td><td>${esc(r.what)}</td>
@@ -1588,6 +1590,7 @@ function ledgerEdit(r) {
   $("#lPlat").innerHTML = '<option value="">-</option>' + S.platforms.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("") + '<option value="etc">기타</option>';
   $("#lDate").value = r.date || today(); $("#lKind").value = r.kind || "원고료"; $("#lPlat").value = r.platform || "";
   $("#lWhat").value = r.what || ""; $("#lAmount").value = r.amount || ""; $("#lValue").value = r.value || ""; $("#lUrl").value = r.url || ""; $("#lMemo").value = r.memo || "";
+  $("#lTax").value = r.tax || "";
   $("#lDel").hidden = !r.id;
   $("#lForm").hidden = false;
   $("#lWhat").focus();
@@ -1600,7 +1603,7 @@ $("#lSave").onclick = async () => {
   const url = $("#lUrl").value.trim();
   if (url && !/^https?:\/\//.test(url)) return toast("글 주소는 http:// 나 https:// 로 시작해야 해요.");
   const item = Object.assign({}, S.editLedger, { date: $("#lDate").value || today(), kind: $("#lKind").value, platform: $("#lPlat").value, what,
-    amount: num($("#lAmount").value), value: num($("#lValue").value), url, memo: $("#lMemo").value.trim() });
+    amount: num($("#lAmount").value), value: num($("#lValue").value), tax: num($("#lTax").value), url, memo: $("#lMemo").value.trim() });
   try {
     await api("/api/items/save", { kind: "ledger", item });
     $("#lForm").hidden = true; S.year = item.date.slice(0, 4); toast("적었어요."); loadLedger();
@@ -1611,17 +1614,17 @@ $("#lDel").onclick = async () => {
   await api("/api/items/delete", { kind: "ledger", id: S.editLedger.id }).catch(fail);
   $("#lForm").hidden = true; loadLedger();
 };
-$("#lCsv").onclick = () => {
-  const rows = yearRows().slice().reverse();
-  if (!rows.length) return toast(S.year + "년 기록이 없어요.");
-  const q = v => '"' + String(v ?? "").replace(/"/g, '""') + '"';
-  const lines = [["날짜", "종류", "플랫폼", "업체·내용", "받은 돈", "물품 가액", "합계", "글 주소", "메모"].map(q).join(",")]
-    .concat(rows.map(r => [r.date, r.kind, r.platform ? plat(r.platform).name || r.platform : "", r.what, num(r.amount), num(r.value), num(r.amount) + num(r.value), r.url, r.memo].map(q).join(",")));
+$("#lTax33").onclick = () => {
+  const a = num($("#lAmount").value);
+  if (!a) return toast("받은 돈을 먼저 적어 주세요.");
+  $("#lTax").value = Math.floor(a * 0.03 / 10) * 10 + Math.floor(a * 0.003 / 10) * 10;      // 소득세 3% + 지방소득세 0.3%, 각각 10원 미만 버림
+};
+$("#lCsv").onclick = () => {                               // 세금 신고 준비용 엑셀 — 요약·내역·월별·업체별(taxbook.py)
+  if (!yearRows().length) return toast(S.year + "년 기록이 없어요.");
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" }));     // BOM — 엑셀이 한글을 바로 읽게
-  a.download = "장부-" + S.year + ".csv";
+  a.href = "/api/ledger.xlsx?year=" + encodeURIComponent(S.year);
+  a.download = "장부-" + S.year + ".xlsx";
   a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 };
 
 // ---------- 썸네일 · 카드뉴스 (화면 캔버스로 — 이 PC 의 한글 글꼴 그대로) ----------

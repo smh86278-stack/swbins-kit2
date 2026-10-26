@@ -36,6 +36,7 @@ import cal
 import gen
 import refs
 import store
+import taxbook
 
 APP = "PostKit"
 PORT = 8650
@@ -567,6 +568,17 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 return self.send(200, growth())
             if u.path == "/api/data":
                 return self.send(200, data_status())
+            if u.path == "/api/ledger.xlsx":                # 장부 → 세금 신고 준비용 엑셀(요약·내역·월별·업체별)
+                year = q.get("year", "") if re.fullmatch(r"\d{4}", q.get("year", "")) else str(datetime.now().year)
+                body = taxbook.build(load_items("ledger"), year, {p["id"]: p["name"] for p in platforms()})
+                self.send_response(200)
+                self.send_header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                self.send_header("Content-Length", str(len(body)))
+                self.send_header("Content-Disposition", "attachment; filename=\"ledger-%s.xlsx\"; filename*=UTF-8''%s" % (year, urllib.parse.quote("장부-%s.xlsx" % year)))
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(body)
+                return
             if u.path == "/api/calendar.ics":               # 캠페인 일정 → 달력 파일(id 가 있으면 그 캠페인만)
                 camps = [c for c in load_items("campaigns") if not q.get("id") or c.get("id") == q["id"]]
                 body = cal.ics(cal.events(camps)).encode("utf-8")
